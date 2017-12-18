@@ -569,6 +569,15 @@ config SOC_IMX6ULL
 	help
 	  This enables support for Freescale i.MX6 ULL processor.
 
+
+config SIKLU_BOARD
+	bool "Siklu PCB19x support"
+	depends on SOC_IMX6ULL
+	
+	help
+	  This enables support for Siklu PCB19x board's family.
+
+
 config SOC_IMX7
 	bool
 	select CPU_V7
