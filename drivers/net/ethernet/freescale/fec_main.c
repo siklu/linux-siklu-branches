@@ -72,6 +72,9 @@
 
 #include "fec.h"
 
+
+extern bool is_board_siklu(void); // used for distinct in run-time Siklu board
+
 static void set_multicast_list(struct net_device *ndev);
 static void fec_enet_itr_coal_init(struct net_device *ndev);
 
@@ -163,7 +166,7 @@ static const struct of_device_id fec_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, fec_dt_ids);
 
-static unsigned char macaddr[ETH_ALEN];
+static unsigned char macaddr[ETH_ALEN] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 }; // edikk this value for test only!
 module_param_array(macaddr, byte, NULL, 0);
 MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 
@@ -3573,6 +3576,11 @@ fec_probe(struct platform_device *pdev)
 	fep->bufdesc_ex = fep->quirks & FEC_QUIRK_HAS_BUFDESC_EX;
 	fep->clk_ptp = devm_clk_get(&pdev->dev, "ptp");
 	if (IS_ERR(fep->clk_ptp)) {
+		fep->clk_ptp = NULL;
+		fep->bufdesc_ex = false;
+	}
+
+	if (is_board_siklu()) { // siklu board doesn't use PTP!
 		fep->clk_ptp = NULL;
 		fep->bufdesc_ex = false;
 	}

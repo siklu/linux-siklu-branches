@@ -653,6 +653,11 @@ static void exit_lpm_imx7d(void)
 
 static void reduce_bus_freq(void)
 {
+
+	if (is_board_siklu()) { // siklu board doesn't reduce freq
+		return;
+	}
+
 	if (cpu_is_imx6())
 		clk_prepare_enable(pll3_clk);
 

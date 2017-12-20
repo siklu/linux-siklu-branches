@@ -252,4 +252,9 @@ extern const struct smp_operations ls1021a_smp_ops;
 
 extern bool uart_from_osc;
 
+
+#ifdef CONFIG_SIKLU_BOARD
+extern bool is_board_siklu(void);
+#endif
+
 #endif

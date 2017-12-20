@@ -1292,3 +1292,40 @@ const struct seq_operations cpuinfo_op = {
 	.stop	= c_stop,
 	.show	= c_show
 };
+
+
+static bool is_siklu_board = false;
+
+bool is_board_siklu(void)
+{
+	return is_siklu_board;
+}
+EXPORT_SYMBOL(is_board_siklu);
+
+static char *board_type = "unknown";
+static int siklu_init_board(void) {
+    int rc = 0;
+	// TBD put code here
+    return rc;
+}
+
+
+static int __init recognize_board_type(char *s)
+{
+	board_type = s;
+
+    if (strcmp(s,"siklu") == 0) {
+    	is_siklu_board = true;
+    }
+
+	return 1;
+}
+
+__setup("board=", recognize_board_type);
+
+
+
+
+#ifdef CONFIG_SIKLU_BOARD
+arch_initcall(siklu_init_board); // CONFIG_SIKLU_EH_BOARD
+#endif

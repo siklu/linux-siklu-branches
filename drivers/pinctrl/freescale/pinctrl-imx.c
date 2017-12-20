@@ -12,6 +12,10 @@
  * (at your option) any later version.
  */
 
+
+#define DEBUG // edikk remove
+
+
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/io.h>
@@ -204,6 +208,15 @@ static int imx_pmx_set(struct pinctrl_dev *pctldev, unsigned selector,
 	dev_dbg(ipctl->dev, "enable function %s group %s\n",
 		info->functions[selector].name, grp->name);
 
+
+	printk( "============>   enable function %s group %s\n",
+			info->functions[selector].name, grp->name); // edikk remove
+
+
+	printk( " %s()============>  return, do nothing\n", __func__);
+	return 0; // edikk dangerous !!!!! remove return here edikk
+
+
 	for (i = 0; i < npins; i++) {
 		struct imx_pin *pin = &grp->pins[i];
 		u32 mux_shift = info->mux_mask ? ffs(info->mux_mask) - 1 : 0;
@@ -316,6 +329,11 @@ static int imx_pmx_gpio_request_enable(struct pinctrl_dev *pctldev,
 	unsigned int pin, group;
 	u32 reg, mux_shift;
 
+
+	printk( " %s()============>  return, do nothing\n", __func__);
+	return 0; // edikk dangerous !!!!! remove return here edikk
+
+
 	/* Currently implementation only for shared mux/conf register */
 	if (!(info->flags & SHARE_MUX_CONF_REG))
 		return 0;
@@ -356,6 +374,10 @@ static void imx_pmx_gpio_disable_free(struct pinctrl_dev *pctldev,
 	const struct imx_pin_reg *pin_reg;
 	u32 reg;
 
+	printk( " %s()============>  return, do nothing\n", __func__);
+	return ; // edikk dangerous !!!!! remove return here edikk
+
+
 	/*
 	 * Only Vybrid has the input/output buffer enable flags (IBE/OBE)
 	 * They are part of the shared mux/conf register.
@@ -380,6 +402,10 @@ static int imx_pmx_gpio_set_direction(struct pinctrl_dev *pctldev,
 	const struct imx_pinctrl_soc_info *info = ipctl->info;
 	const struct imx_pin_reg *pin_reg;
 	u32 reg;
+
+	printk( " %s()============>  return, do nothing\n", __func__);
+	return 0; // edikk dangerous !!!!! remove return here edikk
+
 
 	/*
 	 * Only Vybrid and i.MX7ULP have the input/output buffer enable
@@ -819,7 +845,7 @@ int imx_pinctrl_probe(struct platform_device *pdev,
 		return PTR_ERR(ipctl->pctl);
 	}
 
-	dev_info(&pdev->dev, "initialized IMX pinctrl driver\n");
+	dev_info(&pdev->dev, "IMX initialized IMX pinctrl driver\n");
 
 	return 0;
 }
