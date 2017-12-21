@@ -5,7 +5,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  * Edward K. 
- * 14.11.2017:		The file adapted to Siklu PCB-19x HW boards
+ * 14.11.2017:		The file adapted to Siklu PCB-19x HW boards 
  * 
  */
 
@@ -89,6 +89,51 @@
 	fsl,cpu_pdnscr_iso = <0x1>;
 	fsl,ldo-bypass = <0>; /* DCDC, ldo-enable */
 };
+
+
+&gpmi {
+	status = "okay";
+		/*  ===============  edikk NAND partitions extracted from command line
+		partition@0 {
+			label = "env_ro";
+			reg = <0x0 0x20000>;
+		};
+		partition@20000 {
+			label = "env_var0";
+			reg = <0x20000 0x40000>;
+		};	
+		partition@40000 {
+			label = "env_var1";
+			reg = <0x40000 0x60000>;
+		};
+		partition@60000 {
+			label = "hdr0";
+			reg = <0x60000 0x80000>;
+		};
+		partition@80000 {
+			label = "uimage0";
+			reg = <0x80000 0x2880000>;
+		};
+		partition@2880000 {
+			label = "hdr1";
+			reg = <0x2880000 0x28a0000>;
+		};
+		partition@28a0000 {
+			label = "uimage1";
+			reg = <0x28a0000 0x50a0000>;
+		};
+		partition@50a0000 {
+			label = "conf";
+			reg = <0x50a0000 0x60a0000>;
+		};
+		partition@60a0000 {
+			label = "log";
+			reg = <0x60a0000 0x8000000>;
+		};
+		======================   */
+	
+};
+
 
 &i2c1 {
 	clock-frequency = <100000>;
