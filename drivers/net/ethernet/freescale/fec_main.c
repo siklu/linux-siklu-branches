@@ -2013,6 +2013,16 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	return 0;
 }
 
+#ifdef CONFIG_SIKLU_BOARD
+static struct mii_bus *fec0_mii_bus4siklu = NULL;
+
+struct mii_bus *siklu_get_mii(void)
+{
+	return fec0_mii_bus4siklu;
+}
+EXPORT_SYMBOL(siklu_get_mii);
+#endif
+
 static int fec_enet_mii_init(struct platform_device *pdev)
 {
 	static struct mii_bus *fec0_mii_bus;
@@ -2122,6 +2132,10 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO) {
 		fec0_mii_bus = fep->mii_bus;
 		fec_mii_bus_share = &fep->mii_bus_share;
+		printk("====> %s()   fec0_mii_bus %p\n", __func__, fec0_mii_bus); // edikk remove
+#ifdef CONFIG_SIKLU_BOARD
+		fec0_mii_bus4siklu = fec0_mii_bus;
+#endif //
 	}
 
 	return 0;
