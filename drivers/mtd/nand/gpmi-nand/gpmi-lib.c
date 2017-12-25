@@ -982,15 +982,19 @@ static int enable_edo_mode(struct gpmi_nand_data *this, int mode)
 	feature[0] = mode;
 	ret = nand->onfi_set_features(mtd, nand,
 				ONFI_FEATURE_ADDR_TIMING_MODE, feature);
-	if (ret)
+	if (ret) {
+		printk("%s() ret %d, line %d\n", __func__, ret, __LINE__); // edikk
 		goto err_out;
+	}
 
 	/* [2] send GET FEATURE command to double-check the timing mode */
 	memset(feature, 0, ONFI_SUBFEATURE_PARAM_LEN);
 	ret = nand->onfi_get_features(mtd, nand,
 				ONFI_FEATURE_ADDR_TIMING_MODE, feature);
-	if (ret || feature[0] != mode)
+	if (ret || feature[0] != mode) {
+		printk("%s() ret %d, line %d\n", __func__, ret, __LINE__); // edikk
 		goto err_out;
+	}
 
 	nand->select_chip(mtd, -1);
 
