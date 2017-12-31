@@ -489,6 +489,21 @@ int mdiobus_read(struct mii_bus *bus, int addr, u32 regnum)
 }
 EXPORT_SYMBOL(mdiobus_read);
 
+// Clause45 functions
+int mdiobus_read45(struct mii_bus *bus, int phy_addr, int dev_addr, u32 reg_addr)
+{
+	int retval;
+
+	BUG_ON(in_interrupt());
+
+	mutex_lock(&bus->mdio_lock);
+	retval = bus->read45(bus, phy_addr, dev_addr, reg_addr);
+	mutex_unlock(&bus->mdio_lock);
+
+	return retval;
+}
+EXPORT_SYMBOL(mdiobus_read45);
+
 /**
  * mdiobus_write_nested - Nested version of the mdiobus_write function
  * @bus: the mii_bus struct
@@ -541,6 +556,21 @@ int mdiobus_write(struct mii_bus *bus, int addr, u32 regnum, u16 val)
 	return err;
 }
 EXPORT_SYMBOL(mdiobus_write);
+
+// Clause45 functions
+int mdiobus_write45(struct mii_bus *bus, int phy_addr, int dev_addr, u32 reg_addr, u16 val)
+{
+	int err;
+
+	BUG_ON(in_interrupt());
+
+	mutex_lock(&bus->mdio_lock);
+	err = bus->write45(bus, phy_addr, dev_addr, reg_addr, val);
+	mutex_unlock(&bus->mdio_lock);
+
+	return err;
+}
+EXPORT_SYMBOL(mdiobus_write45);
 
 /**
  * mdio_bus_match - determine if given MDIO driver supports the given

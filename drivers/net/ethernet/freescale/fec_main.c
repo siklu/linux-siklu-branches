@@ -1878,6 +1878,27 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 	return ret;
 }
 
+
+/*
+ * clause45 op
+ */
+static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr)
+{
+	static int ret = 0x123;
+	printk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
+	return ret++;
+}
+/*
+ * clause45 op
+ */
+static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr, u16 val)
+{
+	printk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
+	return 0;
+}
+
+
+
 static int fec_enet_clk_enable(struct net_device *ndev, bool enable)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
@@ -2108,6 +2129,10 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	fep->mii_bus->name = "fec_enet_mii_bus";
 	fep->mii_bus->read = fec_enet_mdio_read;
 	fep->mii_bus->write = fec_enet_mdio_write;
+
+	fep->mii_bus->read45 = fec_enet_mdio_read45;
+	fep->mii_bus->write45 = fec_enet_mdio_write45;
+
 	snprintf(fep->mii_bus->id, MII_BUS_ID_SIZE, "%s-%x",
 		pdev->name, fep->dev_id + 1);
 	fep->mii_bus->priv = fep;

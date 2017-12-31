@@ -166,6 +166,8 @@ struct mii_bus {
 	void *priv;
 	int (*read)(struct mii_bus *bus, int addr, int regnum);
 	int (*write)(struct mii_bus *bus, int addr, int regnum, u16 val);
+	int (*read45)(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr);  // clause45 op
+	int (*write45)(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr, u16 val); // clause45 op
 	int (*reset)(struct mii_bus *bus);
 
 	/*
