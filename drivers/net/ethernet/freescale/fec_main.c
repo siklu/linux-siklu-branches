@@ -2132,7 +2132,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO) {
 		fec0_mii_bus = fep->mii_bus;
 		fec_mii_bus_share = &fep->mii_bus_share;
-		printk("====> %s()   fec0_mii_bus %p\n", __func__, fec0_mii_bus); // edikk remove
+
 #ifdef CONFIG_SIKLU_BOARD
 		fec0_mii_bus4siklu = fec0_mii_bus;
 #endif //
