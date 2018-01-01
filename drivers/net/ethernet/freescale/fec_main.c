@@ -1893,7 +1893,49 @@ static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr,
  */
 static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr, u16 val)
 {
-	printk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
+#if 0
+	/*   edikk code here
+	rintk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
+
+
+	struct fec_enet_private *fep = bus->priv;
+	struct device *dev = &fep->pdev->dev;
+	unsigned long time_left;
+	int ret;
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0)
+		return ret;
+	else
+		ret = 0;
+
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	/* start a write op */
+	writel(FEC_MMFR_ST | FEC_MMFR_OP_WRITE |
+		FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
+		FEC_MMFR_TA | FEC_MMFR_DATA(value),
+		fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO write timeout\n");
+		ret  = -ETIMEDOUT;
+	}
+
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
+
+
+
+
+#endif
+
 	return 0;
 }
 
