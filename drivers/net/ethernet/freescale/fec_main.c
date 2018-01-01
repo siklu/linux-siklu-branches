@@ -1878,24 +1878,157 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 	return ret;
 }
 
+// used for both read and write
+#define FEC_MII_DATA_OP_SHIFT	28	/* MII PHY operation code bits */
+#define	CLAUSE45_OP_ADDR		(0 << FEC_MII_DATA_OP_SHIFT)
+#define CLAUSE45_OP_WRITE		(1 << FEC_MII_DATA_OP_SHIFT)
+#define	CLAUSE45_OP_READ		(3 << FEC_MII_DATA_OP_SHIFT)
+#define CLAUSE45_OP_READ_ADDR	(2 << FEC_MII_DATA_OP_SHIFT)
+
+
+static int fec_enet_mdio_op_clause45(struct mii_bus *bus, u32 op, int phy_addr, int dev_addr, u16* addr_data)
+{
+	struct fec_enet_private *fep = bus->priv;
+	struct device *dev = &fep->pdev->dev;
+	volatile unsigned long time_left;
+	volatile int ret = 0;
+	volatile u16 data;
+	volatile u32 temp;
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0)
+		return ret;
+
+	if (op == CLAUSE45_OP_READ){
+		data = 0xFFFF;
+	}
+	else {
+		data = *addr_data;
+	}
+
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	/* start a read op */
+	temp =  op | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) | FEC_MMFR_TA | FEC_MMFR_DATA(data);
+	writel(temp, fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO read timeout\n");
+		printk("%s()  ERROR line %d\n",__func__, __LINE__);
+		ret = -ETIMEDOUT;
+		goto out;
+	}
+	if (op == CLAUSE45_OP_READ) {
+		temp = readl(fep->hwp + FEC_MII_DATA);
+		ret = FEC_MMFR_DATA(temp);
+		*addr_data = ret;
+	}
+	ret = 0;
+out:
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
+	return ret;
+}
 
 /*
  * clause45 op
  */
 static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr)
 {
-	static int ret = 0x123;
-	printk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
-	return ret++;
+
+	int ret = 0;
+	u16 addr_data;
+
+	addr_data = reg_addr & 0xFFFF;
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_ADDR , phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_READ , phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+	ret = addr_data;
+	return ret;
+
+
+
+#if 0
+	struct fec_enet_private *fep = bus->priv;
+	struct device *dev = &fep->pdev->dev;
+	unsigned long time_left;
+	int ret = 0;
+	u32 temp;
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0)
+		return ret;
+
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	/* Stage #1 - write address */
+	temp =  CLAUSE45_OP_ADDR | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+			FEC_MMFR_TA | FEC_MMFR_DATA(reg_addr);
+	printk("%s()  phy_addr %x, dev_addr %x, reg_addr %x, temp 0x%x\n", __func__,
+			phy_addr,dev_addr, reg_addr, temp); // edikk remove
+	writel( temp, fep->hwp + FEC_MII_DATA);
+	udelay(50); // edikk ????
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO read timeout\n");
+		ret = -ETIMEDOUT;
+		goto out;
+	}
+
+	// stage #2 Read
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	temp = CLAUSE45_OP_READ | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+			FEC_MMFR_TA | FEC_MMFR_DATA(0xFFFF);
+	printk("%s()  temp 0x%x\n", __func__, temp); // edikk remove
+	writel( temp, fep->hwp + FEC_MII_DATA);
+
+	udelay(50); // edikk ????
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO read timeout\n");
+		ret = -ETIMEDOUT;
+		goto out;
+	}
+
+	ret = FEC_MMFR_DATA(readl(fep->hwp + FEC_MII_DATA));
+
+	printk("%s() => Received data 0x%x\n", __func__, ret); // edikk remove
+
+out:
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
+	return ret;
+#endif
 }
 /*
  * clause45 op
  */
 static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr, u16 val)
 {
-#if 0
-	/*   edikk code here
-	rintk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
 
 
 	struct fec_enet_private *fep = bus->priv;
@@ -1909,14 +2042,14 @@ static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_add
 	else
 		ret = 0;
 
+	// printk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
+
 	fep->mii_timeout = 0;
 	reinit_completion(&fep->mdio_done);
 
-	/* start a write op */
-	writel(FEC_MMFR_ST | FEC_MMFR_OP_WRITE |
-		FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
-		FEC_MMFR_TA | FEC_MMFR_DATA(value),
-		fep->hwp + FEC_MII_DATA);
+	/* start a write op - stage#1 write access register */
+	writel( CLAUSE45_OP_ADDR | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+		FEC_MMFR_TA | FEC_MMFR_DATA(reg_addr), fep->hwp + FEC_MII_DATA);
 
 	/* wait for end of transfer */
 	time_left = wait_for_completion_timeout(&fep->mdio_done,
@@ -1927,14 +2060,23 @@ static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_add
 		ret  = -ETIMEDOUT;
 	}
 
+	/* start a write op - stage#2 write reg value */
+	writel( CLAUSE45_OP_WRITE | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+		FEC_MMFR_TA | FEC_MMFR_DATA(val), fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO write timeout\n");
+		ret  = -ETIMEDOUT;
+	}
+
+
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
 
-
-
-
-
-#endif
 
 	return 0;
 }
