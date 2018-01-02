@@ -1899,17 +1899,12 @@ static int fec_enet_mdio_op_clause45(struct mii_bus *bus, u32 op, int phy_addr, 
 	if (ret < 0)
 		return ret;
 
-	if (op == CLAUSE45_OP_READ){
-		data = 0xFFFF;
-	}
-	else {
-		data = *addr_data;
-	}
+	data = *addr_data;
+
 
 	fep->mii_timeout = 0;
 	reinit_completion(&fep->mdio_done);
 
-	/* start a read op */
 	temp =  op | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) | FEC_MMFR_TA | FEC_MMFR_DATA(data);
 	writel(temp, fep->hwp + FEC_MII_DATA);
 
@@ -1941,7 +1936,7 @@ out:
  */
 static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr)
 {
-
+#if 1
 	int ret = 0;
 	u16 addr_data;
 
@@ -1951,7 +1946,7 @@ static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr,
 		printk(" Error on line %d\n", __LINE__);
 		return ret;
 	}
-
+	addr_data = 0; // preset but not need
 	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_READ , phy_addr, dev_addr, &addr_data);
 	if (ret != 0) {
 		printk(" Error on line %d\n", __LINE__);
@@ -1960,9 +1955,7 @@ static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr,
 	ret = addr_data;
 	return ret;
 
-
-
-#if 0
+#else
 	struct fec_enet_private *fep = bus->priv;
 	struct device *dev = &fep->pdev->dev;
 	unsigned long time_left;
@@ -2029,7 +2022,26 @@ out:
  */
 static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr, u16 val)
 {
+#if 1
+	int ret = 0;
+	u16 addr_data;
 
+	addr_data = reg_addr & 0xFFFF;
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_ADDR , phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+	addr_data = val; //
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_WRITE, phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+	ret = 0;
+	return ret;
+
+#else
 
 	struct fec_enet_private *fep = bus->priv;
 	struct device *dev = &fep->pdev->dev;
@@ -2076,9 +2088,8 @@ static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_add
 
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
-
-
 	return 0;
+#endif
 }
 
 
