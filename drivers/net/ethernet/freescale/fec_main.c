@@ -1972,10 +1972,8 @@ static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr,
 	/* Stage #1 - write address */
 	temp =  CLAUSE45_OP_ADDR | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
 			FEC_MMFR_TA | FEC_MMFR_DATA(reg_addr);
-	printk("%s()  phy_addr %x, dev_addr %x, reg_addr %x, temp 0x%x\n", __func__,
-			phy_addr,dev_addr, reg_addr, temp); // edikk remove
 	writel( temp, fep->hwp + FEC_MII_DATA);
-	udelay(50); // edikk ????
+
 	/* wait for end of transfer */
 	time_left = wait_for_completion_timeout(&fep->mdio_done,
 			usecs_to_jiffies(FEC_MII_TIMEOUT));
@@ -1992,10 +1990,9 @@ static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr,
 
 	temp = CLAUSE45_OP_READ | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
 			FEC_MMFR_TA | FEC_MMFR_DATA(0xFFFF);
-	printk("%s()  temp 0x%x\n", __func__, temp); // edikk remove
+
 	writel( temp, fep->hwp + FEC_MII_DATA);
 
-	udelay(50); // edikk ????
 	/* wait for end of transfer */
 	time_left = wait_for_completion_timeout(&fep->mdio_done,
 			usecs_to_jiffies(FEC_MII_TIMEOUT));
@@ -2007,8 +2004,6 @@ static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr,
 	}
 
 	ret = FEC_MMFR_DATA(readl(fep->hwp + FEC_MII_DATA));
-
-	printk("%s() => Received data 0x%x\n", __func__, ret); // edikk remove
 
 out:
 	pm_runtime_mark_last_busy(dev);
@@ -2053,8 +2048,6 @@ static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_add
 		return ret;
 	else
 		ret = 0;
-
-	// printk("%s()  Called !!!!\n", __func__); // edikk - add right code !!!
 
 	fep->mii_timeout = 0;
 	reinit_completion(&fep->mdio_done);
