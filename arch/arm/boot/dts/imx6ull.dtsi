@@ -257,8 +257,8 @@
 					#address-cells = <1>;
 					#size-cells = <0>;
 					compatible = "fsl,imx6ul-ecspi", "fsl,imx51-ecspi";
-					reg = <0x02008000 0x4000>;
-					/* interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>; siklu RFIC doesn't support interrupt */
+					reg = <0x02008000 0x4000>; 
+					interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>; 
 					clocks = <&clks IMX6UL_CLK_ECSPI1>,
 						 <&clks IMX6UL_CLK_ECSPI1>;
 					clock-names = "ipg", "per";
@@ -272,7 +272,7 @@
 					#size-cells = <0>;
 					compatible = "fsl,imx6ul-ecspi", "fsl,imx51-ecspi";
 					reg = <0x0200c000 0x4000>;
-					/* interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;  siklu sNOR doesn't support interrupt */
+					interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>; 
 					clocks = <&clks IMX6UL_CLK_ECSPI2>,
 						 <&clks IMX6UL_CLK_ECSPI2>;
 					clock-names = "ipg", "per";
