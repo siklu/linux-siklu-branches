@@ -209,12 +209,9 @@ static int imx_pmx_set(struct pinctrl_dev *pctldev, unsigned selector,
 		info->functions[selector].name, grp->name);
 
 
-	printk( "============>   enable function %s group %s\n",
+	printk( "=== ### =========>  %s() call function '%s' group '%s'\n", __func__,
 			info->functions[selector].name, grp->name); // edikk remove
 
-
-	printk( " %s()============>  return, do nothing\n", __func__);
-	return 0; // edikk dangerous !!!!! remove return here edikk
 
 
 	for (i = 0; i < npins; i++) {
@@ -330,8 +327,6 @@ static int imx_pmx_gpio_request_enable(struct pinctrl_dev *pctldev,
 	u32 reg, mux_shift;
 
 
-	printk( " %s()============>  return, do nothing\n", __func__);
-	return 0; // edikk dangerous !!!!! remove return here edikk
 
 
 	/* Currently implementation only for shared mux/conf register */
@@ -374,9 +369,6 @@ static void imx_pmx_gpio_disable_free(struct pinctrl_dev *pctldev,
 	const struct imx_pin_reg *pin_reg;
 	u32 reg;
 
-	printk( " %s()============>  return, do nothing\n", __func__);
-	return ; // edikk dangerous !!!!! remove return here edikk
-
 
 	/*
 	 * Only Vybrid has the input/output buffer enable flags (IBE/OBE)
@@ -402,9 +394,6 @@ static int imx_pmx_gpio_set_direction(struct pinctrl_dev *pctldev,
 	const struct imx_pinctrl_soc_info *info = ipctl->info;
 	const struct imx_pin_reg *pin_reg;
 	u32 reg;
-
-	printk( " %s()============>  return, do nothing\n", __func__);
-	return 0; // edikk dangerous !!!!! remove return here edikk
 
 
 	/*
