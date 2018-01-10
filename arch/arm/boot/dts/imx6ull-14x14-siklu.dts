@@ -138,8 +138,12 @@
 
 &ecspi1 { /* siklu RFIC70 and RFIC80 */ 
 		status = "okay";
-		fsl,spi-num-chipselects = <1>; 
-		cs-gpios = <&gpio4 26 GPIO_ACTIVE_LOW>;
+		fsl,spi-num-chipselects = <4>; 
+		cs-gpios = <&gpio4 26 GPIO_ACTIVE_LOW
+		&gpio3 10 GPIO_ACTIVE_LOW
+		&gpio3 11 GPIO_ACTIVE_LOW
+		&gpio3 12 GPIO_ACTIVE_LOW
+		>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ecspi1_1 &pinctrl_ecspi1_cs_1>;
 		rfic: skl_rfic@0 {
@@ -248,7 +252,10 @@
 
 	pinctrl_ecspi1_cs_1: ecspi1_cs_grp-1 {
 		fsl,pins = <
-			MX6UL_PAD_CSI_DATA05__GPIO4_IO26  0x10b0
+			MX6UL_PAD_CSI_DATA05__GPIO4_IO26  0x10b0 /* SS0# */
+			MX6UL_PAD_LCD_DATA05__GPIO3_IO10  0x10b0 /* SS1# */
+			MX6UL_PAD_LCD_DATA06__GPIO3_IO11  0x10b0 /* SS2# */
+			MX6UL_PAD_LCD_DATA07__GPIO3_IO12  0x10b0 /* SS3# */
 		>;
 	};
 	pinctrl_ecspi1_1: ecspi1grp-1 {
