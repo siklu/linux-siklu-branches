@@ -200,6 +200,15 @@
 	};
 };
 
+
+&i2c2 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	status = "okay";
+};
+
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
@@ -244,11 +253,17 @@
 
 	pinctrl_i2c1: i2c1grp {
 		fsl,pins = <
-			MX6UL_PAD_UART4_TX_DATA__I2C1_SCL 0x4001b8b0
-			MX6UL_PAD_UART4_RX_DATA__I2C1_SDA 0x4001b8b0
+			MX6UL_PAD_CSI_PIXCLK__I2C1_SCL  0x4001b8b0
+			MX6UL_PAD_CSI_MCLK__I2C1_SDA  0x4001b8b0
 		>;
 	};
-
+	
+	pinctrl_i2c2: i2c2grp {
+		fsl,pins = <
+			MX6UL_PAD_CSI_HSYNC__I2C2_SCL  0x4001b8b0
+			MX6UL_PAD_CSI_VSYNC__I2C2_SDA  0x4001b8b0
+		>;
+	};	
 
 	pinctrl_ecspi1_cs_1: ecspi1_cs_grp-1 {
 		fsl,pins = <
@@ -305,21 +320,48 @@
 			MX6UL_PAD_UART3_TX_DATA__UART2_DTE_RTS	0x1b0b1
 		>;
 	};
+	
+	pinctrl_uart3: uart3grp {
+		fsl,pins = <
+			MX6UL_PAD_UART3_TX_DATA__UART3_DCE_TX 0x1b0b1
+			MX6UL_PAD_UART3_RX_DATA__UART3_DCE_RX 0x1b0b1
+		>;
+	};
+	
+	pinctrl_uart4: uart4grp {
+		fsl,pins = <
+			MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX 0x1b0b1
+			MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX 0x1b0b1
+		>;
+	};
+	
 
 	pinctrl_usb_otg1_id: usbotg1idgrp {
 		fsl,pins = <
 			MX6UL_PAD_GPIO1_IO00__ANATOP_OTG1_ID	0x17059
 		>;
 	};
-
-
 };
 
-&uart1 {
+&uart1 { /* serial debug interface */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1>;
+	pinctrl-0 = <&pinctrl_uart1>; 
 	status = "okay";
 };
+
+&uart3 {  /* broadcom modem */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>; 
+	status = "okay";
+};
+
+&uart4 { /* k60b interface */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>; 
+	status = "okay";
+};
+
+
 
 
 
