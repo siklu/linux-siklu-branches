@@ -156,6 +156,24 @@
 };
  
 
+&ecspi2 {
+	status = "okay";
+	fsl,spi-num-chipselects = <2>;
+	cs-gpios = <&gpio4 22 GPIO_ACTIVE_LOW 
+	&gpio3 2 GPIO_ACTIVE_LOW
+	>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2 &pinctrl_ecspi2_cs_1>;
+	cpld: skl_cpld@0 {
+		compatible = "cpld";
+		spi-max-frequency = <10000000>;
+		spi-cs-low;
+		reg = <1>;
+		mode = <0>;
+	};
+};
+	
+	
 &ecspi3 {   /* siklu SPI-NOR */
 	status = "okay";
 	spi-max-frequency = <1000000>;
@@ -258,12 +276,50 @@
 		>;
 	};
 	
+	
+	pinctrl_gpmi_nand_1: gpmi-nand-1 {
+		fsl,pins = <
+			MX6UL_PAD_NAND_RE_B__RAWNAND_RE_B       0x10b0
+			MX6UL_PAD_NAND_WE_B__RAWNAND_WE_B       0x10b0
+			MX6UL_PAD_NAND_DATA00__RAWNAND_DATA00   0x10b0
+			MX6UL_PAD_NAND_DATA01__RAWNAND_DATA01   0x10b0
+			MX6UL_PAD_NAND_DATA02__RAWNAND_DATA02   0x10b0
+			MX6UL_PAD_NAND_DATA03__RAWNAND_DATA03   0x10b0
+			MX6UL_PAD_NAND_DATA04__RAWNAND_DATA04   0x10b0
+			MX6UL_PAD_NAND_DATA05__RAWNAND_DATA05   0x10b0
+			MX6UL_PAD_NAND_DATA06__RAWNAND_DATA06   0x10b0
+			MX6UL_PAD_NAND_DATA07__RAWNAND_DATA07   0x10b0
+			MX6UL_PAD_NAND_ALE__RAWNAND_ALE         0x10b0
+			MX6UL_PAD_NAND_WP_B__RAWNAND_WP_B       0x10b0
+			MX6UL_PAD_NAND_READY_B__RAWNAND_READY_B 0x10b0
+			MX6UL_PAD_NAND_CE0_B__RAWNAND_CE0_B     0x10b0
+			MX6UL_PAD_NAND_CE1_B__RAWNAND_CE1_B     0x10b0
+			MX6UL_PAD_NAND_CLE__RAWNAND_CLE         0x10b0
+			MX6UL_PAD_NAND_DQS__RAWNAND_DQS         0x10b0
+		>;
+	};
+	
 	pinctrl_i2c2: i2c2grp {
 		fsl,pins = <
 			MX6UL_PAD_CSI_HSYNC__I2C2_SCL  0x4001b8b0
 			MX6UL_PAD_CSI_VSYNC__I2C2_SDA  0x4001b8b0
 		>;
 	};	
+
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			MX6UL_PAD_CSI_DATA00__ECSPI2_SCLK	0x10b0
+			MX6UL_PAD_CSI_DATA02__ECSPI2_MOSI	0x10b0
+			MX6UL_PAD_CSI_DATA03__ECSPI2_MISO	0x10b0
+		>;
+	};
+
+	pinctrl_ecspi2_cs_1: ecspi2_cs_grp-1 {
+		fsl,pins = <
+			MX6UL_PAD_CSI_DATA01__GPIO4_IO22	0x10b0 /* SS0# */
+			MX6UL_PAD_LCD_HSYNC__GPIO3_IO02		0x10b0 /* SS1# */
+		>;
+	};
 
 	pinctrl_ecspi1_cs_1: ecspi1_cs_grp-1 {
 		fsl,pins = <
