@@ -209,8 +209,8 @@ static int imx_pmx_set(struct pinctrl_dev *pctldev, unsigned selector,
 		info->functions[selector].name, grp->name);
 
 
-	printk( "=== ### =========>  %s() call function '%s' group '%s'\n", __func__,
-			info->functions[selector].name, grp->name); // edikk remove
+	//printk( "=== ### =========>  %s() call function '%s' group '%s'\n", __func__,
+	//		info->functions[selector].name, grp->name); // edikk use for debug
 
 
 
