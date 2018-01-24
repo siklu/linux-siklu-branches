@@ -558,27 +558,37 @@ static int platform_drv_probe(struct device *_dev)
 	struct platform_device *dev = to_platform_device(_dev);
 	int ret;
 
+	// printk("#####   %s()    line %d, name %s\n", __func__, __LINE__, drv->driver.name); // edikk
+
 	ret = of_clk_set_defaults(_dev->of_node, false);
-	if (ret < 0)
+	if (ret < 0) {
+		printk("###############  ERROR %s()    line %d\n", __func__, __LINE__); // edikk
 		return ret;
+	}
+
 
 	ret = dev_pm_domain_attach(_dev, true);
 	if (ret != -EPROBE_DEFER) {
+		//printk("###############   %s()    line %d\n", __func__, __LINE__); // edikk
 		if (drv->probe) {
+			// printk("###############   %s()    line %d, name %s\n", 	__func__, __LINE__, drv->driver.name); // edikk
 			ret = drv->probe(dev);
 			if (ret)
 				dev_pm_domain_detach(_dev, true);
 		} else {
 			/* don't fail if just dev_pm_domain_attach failed */
+			//printk("###############   %s()    line %d\n", __func__, __LINE__); // edikk
 			ret = 0;
 		}
 	}
 
+
 	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
+		printk("###############  NOT SUP  %s()    line %d\n", __func__, __LINE__); // edikk
 		dev_warn(_dev, "probe deferral not supported\n");
 		ret = -ENXIO;
 	}
-
+	//printk("###############   %s()    line %d\n", __func__, __LINE__); // edikk
 	return ret;
 }
 

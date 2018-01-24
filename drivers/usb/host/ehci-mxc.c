@@ -57,10 +57,14 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct ehci_hcd *ehci;
 
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
+
 	if (!pdata) {
 		dev_err(dev, "No platform data given, bailing out.\n");
 		return -EINVAL;
 	}
+
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 
 	irq = platform_get_irq(pdev, 0);
 
@@ -74,13 +78,14 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 		ret = PTR_ERR(hcd->regs);
 		goto err_alloc;
 	}
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 	hcd->rsrc_start = res->start;
 	hcd->rsrc_len = resource_size(res);
 
 	hcd->has_tt = 1;
 	ehci = hcd_to_ehci(hcd);
 	priv = (struct ehci_mxc_priv *) ehci->priv;
-
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 	/* enable clocks */
 	priv->usbclk = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(priv->usbclk)) {
@@ -95,7 +100,7 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 		goto err_clk_ahb;
 	}
 	clk_prepare_enable(priv->ahbclk);
-
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 	/* "dr" device has its own clock on i.MX51 */
 	priv->phyclk = devm_clk_get(&pdev->dev, "phy");
 	if (IS_ERR(priv->phyclk))
@@ -103,7 +108,7 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 	if (priv->phyclk)
 		clk_prepare_enable(priv->phyclk);
 
-
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 	/* call platform specific init function */
 	if (pdata->init) {
 		ret = pdata->init(pdev);
@@ -114,7 +119,7 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 		/* platforms need some time to settle changed IO settings */
 		mdelay(10);
 	}
-
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 	/* EHCI registers start at offset 0x100 */
 	ehci->caps = hcd->regs + 0x100;
 	ehci->regs = hcd->regs + 0x100 +
@@ -125,7 +130,7 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 
 	/* is this really needed? */
 	msleep(10);
-
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 	/* Initialize the transceiver */
 	if (pdata->otg) {
 		pdata->otg->io_priv = hcd->regs + ULPI_VIEWPORT_OFFSET;
@@ -147,11 +152,13 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (ret)
 		goto err_add;
-
+	//printk("##### %s()   line %d\n", __func__, __LINE__); // edikk remove
 	device_wakeup_enable(hcd->self.controller);
+
 	return 0;
 
 err_add:
+	printk("##### %s() ERROR  line %d\n", __func__, __LINE__); // edikk remove
 	if (pdata && pdata->exit)
 		pdata->exit(pdev);
 err_init:
@@ -208,7 +215,7 @@ static int __init ehci_mxc_init(void)
 		return -ENODEV;
 
 	pr_info("%s: " DRIVER_DESC "\n", hcd_name);
-
+	printk("###############   %s()    line %d\n", __func__, __LINE__); // edikk
 	ehci_init_driver(&ehci_mxc_hc_driver, &ehci_mxc_overrides);
 	return platform_driver_register(&ehci_mxc_driver);
 }

@@ -983,7 +983,7 @@ static int enable_edo_mode(struct gpmi_nand_data *this, int mode)
 	ret = nand->onfi_set_features(mtd, nand,
 				ONFI_FEATURE_ADDR_TIMING_MODE, feature);
 	if (ret) {
-		printk("%s() ret %d, line %d\n", __func__, ret, __LINE__); // edikk
+		//printk("%s() ERROR ret %d, line %d\n", __func__, ret, __LINE__);
 		goto err_out;
 	}
 
@@ -992,7 +992,7 @@ static int enable_edo_mode(struct gpmi_nand_data *this, int mode)
 	ret = nand->onfi_get_features(mtd, nand,
 				ONFI_FEATURE_ADDR_TIMING_MODE, feature);
 	if (ret || feature[0] != mode) {
-		printk("%s() ret %d, line %d\n", __func__, ret, __LINE__); // edikk
+		// printk("%s() ERROR ret %d, line %d\n", __func__, ret, __LINE__);
 		goto err_out;
 	}
 
