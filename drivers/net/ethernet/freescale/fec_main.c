@@ -2280,6 +2280,11 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	 * document.
 	 */
 	mii_speed = DIV_ROUND_UP(clk_get_rate(fep->clk_ipg), 5000000);
+
+#ifdef CONFIG_SIKLU_BOARD
+	// mii_speed /= 2; // pre-set MDC frequiency to 4.6MHz. I'm not sure that we need it siklu
+#endif // CONFIG_SIKLU_BOARD
+
 	if (fep->quirks & FEC_QUIRK_ENET_MAC)
 		mii_speed--;
 	if (mii_speed > 63) {
@@ -2305,6 +2310,8 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	holdtime = DIV_ROUND_UP(clk_get_rate(fep->clk_ipg), 100000000) - 1;
 
 	fep->phy_speed = mii_speed << 1 | holdtime << 8;
+
+	// printk("%s()  fep->phy_speed 0x%x, line %d\n", __func__, fep->phy_speed, __LINE__); 
 
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 
@@ -2358,6 +2365,22 @@ err_out_free_mdiobus:
 err_out:
 	return err;
 }
+
+#ifdef CONFIG_SIKLU_BOARD
+int fec_enet_mii_speed_conf(struct mii_bus *bus, bool is_fast) // siklu
+{
+	int rc = 0;
+	struct fec_enet_private *fep = bus->priv;
+	if (is_fast) {
+		writel(0x4, fep->hwp + FEC_MII_SPEED); // set speed x4 over regular 2.5MHz
+	}
+	else  {
+		writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
+	}
+	return rc;
+}
+EXPORT_SYMBOL( fec_enet_mii_speed_conf );
+#endif // CONFIG_SIKLU_BOARD
 
 static void fec_enet_mii_remove(struct fec_enet_private *fep)
 {
