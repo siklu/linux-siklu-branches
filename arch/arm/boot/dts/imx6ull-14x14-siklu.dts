@@ -58,6 +58,12 @@
 			/* gpio = <&gpio1 2 GPIO_ACTIVE_HIGH>; */
 			enable-active-high;
 		};
+		reg_vref_3v3: regulator@1 {
+			compatible = "regulator-fixed";
+			regulator-name = "vref-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
 	};
 };
 
@@ -235,15 +241,16 @@
 
 &iomuxc {
 	pinctrl-names = "default";
+	/*  ==============  siklu pcb19x no need  ============ start ===========================
 	pinctrl-0 = <&pinctrl_hog_1>;
 	pinctrl_hog_1: hoggrp-1 {
 		fsl,pins = <
-			MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
-			MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */
-			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
+			MX6UL_PAD_UART1_RTS_B__GPIO1_IO19		0x17059 / * SD1 CD      * /
+			MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 / * SD1 VSELECT * /
+			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 / * SD1 RESET   * /
 		>;
 	};
-	/* siklu pcb19x no need
+
 	pinctrl_csi1: csi1grp { 
 		fsl,pins = <
 			MX6UL_PAD_CSI_MCLK__CSI_MCLK		0x1b088
@@ -260,7 +267,7 @@
 			MX6UL_PAD_CSI_DATA07__CSI_DATA09	0x1b088
 		>;
 	};
-	*/
+	 ==============  siklu pcb19x no need  ========== end ============================= */
 	
 	pinctrl_enet1: enet1grp {
 		fsl,pins = <
@@ -403,6 +410,21 @@
 			MX6UL_PAD_GPIO1_IO00__ANATOP_OTG1_ID	0x17059
 		>;
 	};
+	
+	pinctrl_adc1: adc1grp {
+		fsl,pins = <
+			MX6UL_PAD_GPIO1_IO00__GPIO1_IO00        0xb0
+			MX6UL_PAD_GPIO1_IO01__GPIO1_IO01        0xb0
+			MX6UL_PAD_GPIO1_IO02__GPIO1_IO02        0xb0
+			MX6UL_PAD_GPIO1_IO03__GPIO1_IO03        0xb0
+			MX6UL_PAD_GPIO1_IO04__GPIO1_IO04        0xb0
+			MX6UL_PAD_GPIO1_IO05__GPIO1_IO05        0xb0
+			/* jump over GPIO1_IO06 and GPIO1_IO07       */
+			MX6UL_PAD_GPIO1_IO08__GPIO1_IO08        0xb0
+			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0xb0
+		>;
+	};
+	
 };
 
 &uart1 { /* serial debug interface */
@@ -450,5 +472,13 @@
 
 &tsc {
 	status = "disabled";
+};
+
+&adc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_adc1>;
+	vref-supply = <&reg_vref_3v3>;
+	num-channels = <8>;  /* override default value in arch/arm/boot/dts/imx6ull.dtsi */
+	status = "okay";
 };
 
