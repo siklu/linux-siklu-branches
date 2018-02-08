@@ -3571,7 +3571,7 @@ static int nand_flash_detect_onfi(struct mtd_info *mtd, struct nand_chip *chip,
 		*busw = 0;
 
 	if (p->ecc_bits != 0xff) {
-		chip->ecc_strength_ds = p->ecc_bits;
+		chip->ecc_strength_ds = 8;//p->ecc_bits; - was changed to match uboot value
 		chip->ecc_step_ds = 512;
 	} else if (chip->onfi_version >= 21 &&
 		(onfi_feature(chip) & ONFI_FEATURE_EXT_PARAM_PAGE)) {

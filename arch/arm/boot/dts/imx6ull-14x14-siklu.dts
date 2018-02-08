@@ -105,9 +105,9 @@
 
 &gpmi {
 	status = "okay";
-	/* nand-ecc-strength = <8>; 
-	nand-ecc-step-size = <512>;
-	*/
+	interrupt-names = "bch";
+	reg-names = "gpmi-nand", "bch";
+	
 	/*  ===============  edikk NAND partitions extracted from command line
 		partition@0 {
 			label = "env_ro";
