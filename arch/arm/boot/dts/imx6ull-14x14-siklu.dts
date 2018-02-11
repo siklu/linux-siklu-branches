@@ -107,45 +107,6 @@
 	status = "okay";
 	interrupt-names = "bch";
 	reg-names = "gpmi-nand", "bch";
-	
-	/*  ===============  edikk NAND partitions extracted from command line
-		partition@0 {
-			label = "env_ro";
-			reg = <0x0 0x20000>;
-		};
-		partition@20000 {
-			label = "env_var0";
-			reg = <0x20000 0x40000>;
-		};	
-		partition@40000 {
-			label = "env_var1";
-			reg = <0x40000 0x60000>;
-		};
-		partition@60000 {
-			label = "hdr0";
-			reg = <0x60000 0x80000>;
-		};
-		partition@80000 {
-			label = "uimage0";
-			reg = <0x80000 0x2880000>;
-		};
-		partition@2880000 {
-			label = "hdr1";
-			reg = <0x2880000 0x28a0000>;
-		};
-		partition@28a0000 {
-			label = "uimage1";
-			reg = <0x28a0000 0x50a0000>;
-		};
-		partition@50a0000 {
-			label = "conf";
-			reg = <0x50a0000 0x60a0000>;
-		};
-		partition@60a0000 {
-			label = "log";
-			reg = <0x60a0000 0x8000000>;
-		};
-	======================   */
 };
 
 &ecspi1 { /* siklu RFIC70 and RFIC80 */ 
