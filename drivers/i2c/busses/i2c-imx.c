@@ -1266,6 +1266,14 @@ static int imx_reg_slave(struct i2c_client *slave)
 	i2c_slave_thread_init(i2c_imx);
 	i2c_imx_slave_stored = i2c_imx;
 	debugp("######>> %s()   line %d\n", __func__, __LINE__);
+	{
+		// for this purpose requires set bit IIEN in I2Cx_I2CR register
+		uint32_t i2cr = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2CR);
+		i2cr |= 0x40;
+		imx_i2c_write_reg(i2cr, i2c_imx, IMX_I2C_I2CR);
+
+		printk("%s() Start I2C%d interface in slave mode\n", __func__,  i2c_imx->adapter.nr+1);
+	}
 	return 0;
 }
 
