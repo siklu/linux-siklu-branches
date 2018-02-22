@@ -189,6 +189,10 @@
 		compatible = "ti,tmp421";
 		reg = <0x4c>;
 	};
+	sfp10G@50 {   /* siklu SFP 10G/1G */
+		compatible = "siklu,sfp10G";
+		reg = <0x50>;
+	};
 };
 
 
