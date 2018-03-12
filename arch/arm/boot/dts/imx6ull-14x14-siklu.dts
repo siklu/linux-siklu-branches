@@ -65,6 +65,16 @@
 			regulator-max-microvolt = <3300000>;
 		};
 	};
+	
+	onewire {
+		compatible = "w1-gpio";
+		pinctrl-names = "default";
+		linux,open-drain;
+		pinctrl-0 = <&pinctrl_w1_0>;
+		gpios = <&gpio3 19 0>;
+		status = "okay";
+	};
+
 };
 
 &cpu0 {
@@ -361,6 +371,11 @@
 			MX6UL_PAD_GPIO1_IO08__GPIO1_IO08        0xb0
 			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0xb0
 		>;
+	};
+	pinctrl_w1_0:  w1_0grp { /* used for access 1-wire EEPROM */
+		fsl,pins = <
+			MX6UL_PAD_LCD_DATA14__GPIO3_IO19        0xb0 /* 0x48b0 */
+		>;	
 	};
 	
 };
