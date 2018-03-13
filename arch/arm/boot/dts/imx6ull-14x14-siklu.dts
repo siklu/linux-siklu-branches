@@ -374,7 +374,8 @@
 	};
 	pinctrl_w1_0:  w1_0grp { /* used for access 1-wire EEPROM */
 		fsl,pins = <
-			MX6UL_PAD_LCD_DATA14__GPIO3_IO19        0xb0 /* 0x48b0 */
+			MX6UL_PAD_LCD_DATA14__GPIO3_IO19        0xb0 
+			MX6UL_PAD_LCD_DATA15__GPIO3_IO20        0xb0 
 		>;	
 	};
 	
