@@ -65,9 +65,9 @@
 #endif // CONFIG_I2C_SLAVE
 
 
-// #define SIKLU_DEBUG_I2C_SLAVE
+// #define SIKLU_DEBUG_I2C_SLAVE   // used for siklu debug only
 
-#ifdef SIKLU_DEBUG_I2C_SLAVE  // used for siklu debug only edikk . remove it later
+#ifdef SIKLU_DEBUG_I2C_SLAVE  
 # define debugp printk
 #else
 # define debugp(fmt, a...)
@@ -361,6 +361,10 @@ static int i2c_slave_mode_thread(void* data)
  */
 static int i2c_slave_thread_init(struct imx_i2c_struct *i2c_imx) {
 
+
+	return 0;// siklu - disavble thread. In any case our SW doesn't use it
+
+
 	if (i2c_slave_thread == NULL) {
 		char our_thread[] = "i2c_slave";
 
@@ -513,7 +517,7 @@ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy)
 {
 	unsigned long orig_jiffies = jiffies;
 	unsigned int temp;
-	u32 i = 0; // edikk check does we need this counter ? it not exists in original code
+	u32 i = 0;
 
 	dev_dbg(&i2c_imx->adapter.dev, "<%s>\n", __func__);
 	debugp("######>> %s()   line %d\n", __func__, __LINE__);
@@ -734,6 +738,7 @@ static void i2c_imx_isr_slave_event(struct imx_i2c_struct *i2c_imx, uint32_t i2s
 	if (siklu_i2c_slave_event) {
 		siklu_i2c_slave_event(&i2c_imx->adapter,  i2sr_val, val);
 	}
+
 }
 
 #endif // (CONFIG_I2C_SLAVE)
