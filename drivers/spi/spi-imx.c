@@ -38,6 +38,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/delay.h>
 
 #include <linux/platform_data/dma-imx.h>
 #include <linux/platform_data/spi-imx.h>
@@ -1084,6 +1085,7 @@ static int spi_imx_pio_transfer(struct spi_device *spi,
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	unsigned long transfer_timeout;
 	unsigned long timeout;
+	static int count = 0;
 
 	spi_imx->tx_buf = transfer->tx_buf;
 	spi_imx->rx_buf = transfer->rx_buf;
@@ -1097,6 +1099,13 @@ static int spi_imx_pio_transfer(struct spi_device *spi,
 	spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TE);
 
 	transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
+	if (0) {  // edikk for debug only
+		printk("pio_t %d transfer_timeout %ld, len %d\n", spi_imx->bitbang.master->bus_num,
+			transfer_timeout, transfer->len); // edikk remove
+		if ((count % 1000)==0) {
+			printk(" count - %d\n", count++);
+		}
+	}
 
 	timeout = wait_for_completion_timeout(&spi_imx->xfer_done,
 					      transfer_timeout);
@@ -1114,8 +1123,19 @@ static int spi_imx_transfer(struct spi_device *spi,
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 
-	if (spi_imx->usedma)
+	msleep(1); // edikk ???
+
+	if (1) { // edikk for debug only remove the code after debug
+		static unsigned long count = 0;
+		if ((count%100000)==0)// edikk for debug only
+			printk("%s()  reached %lu calls\n", __func__, count );
+		count++;
+	}
+
+	if (spi_imx->usedma) {
+		// printk("%s()   Called DMA transfer!!!!!\n", __func__); // edikk remove
 		return spi_imx_dma_transfer(spi_imx, transfer);
+	}
 	else
 		return spi_imx_pio_transfer(spi, transfer);
 }
