@@ -33,6 +33,11 @@
 #include <linux/sort.h>
 #include <linux/psci.h>
 
+
+#ifdef CONFIG_SIKLU_BOARD
+#include <linux/syscalls.h>
+#endif
+
 #include <asm/unified.h>
 #include <asm/cp15.h>
 #include <asm/cpu.h>
@@ -1327,5 +1332,21 @@ __setup("board=", recognize_board_type);
 
 
 #ifdef CONFIG_SIKLU_BOARD
+
+// need for read in kernel data from serial port
+long siklu_sys_read(unsigned int fd, char __user *buf, size_t count)
+{
+	return sys_read(fd, buf, count);
+}
+
+long siklu_sys_open(const char __user *filename, int flags, umode_t mode)
+{
+	return sys_open(filename, flags, mode);
+}
+
+EXPORT_SYMBOL(siklu_sys_read);
+EXPORT_SYMBOL(siklu_sys_open);
+
+
 arch_initcall(siklu_init_board); // CONFIG_SIKLU_EH_BOARD
 #endif
