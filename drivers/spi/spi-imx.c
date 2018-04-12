@@ -1122,22 +1122,15 @@ static int spi_imx_transfer(struct spi_device *spi,
 				struct spi_transfer *transfer)
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
-
-	msleep(1); // edikk ???
-
-	if (1) { // edikk for debug only remove the code after debug
-		static unsigned long count = 0;
-		if ((count%100000)==0)// edikk for debug only
-			printk("%s()  reached %lu calls\n", __func__, count );
-		count++;
-	}
+	int ret;
 
 	if (spi_imx->usedma) {
-		// printk("%s()   Called DMA transfer!!!!!\n", __func__); // edikk remove
-		return spi_imx_dma_transfer(spi_imx, transfer);
+		ret = spi_imx_dma_transfer(spi_imx, transfer);
 	}
-	else
-		return spi_imx_pio_transfer(spi, transfer);
+	else {
+		ret = spi_imx_pio_transfer(spi, transfer);
+	}
+	return ret;
 }
 
 static int spi_imx_setup(struct spi_device *spi)
