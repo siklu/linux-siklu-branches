@@ -294,7 +294,7 @@ static int pcf8523_probe(struct i2c_client *client,
 	err = pcf8523_select_capacitance(client, true);
 	if (err < 0)
 		return err;
-#if 0
+#ifndef CONFIG_SIKLU_BOARD
 	err = pcf8523_set_pm(client, 0);
 #else // siklu
 
