@@ -1099,9 +1099,7 @@ static int spi_imx_pio_transfer(struct spi_device *spi,
 	spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TE);
 
 	transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
-	if (0) {  // edikk for debug only
-		printk("pio_t %d transfer_timeout %ld, len %d\n", spi_imx->bitbang.master->bus_num,
-			transfer_timeout, transfer->len); // edikk remove
+	if (0) {  //  for debug only
 		if ((count % 1000)==0) {
 			printk(" count - %d\n", count++);
 		}

@@ -4329,8 +4329,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	const char		*speed;
 	int			devnum = udev->devnum;
 
-	//printk("###############  %s()    line %d\n", __func__, __LINE__); // edikk
-
 	/* root hub ports have a slightly longer reset period
 	 * (from USB 2.0 spec, section 7.1.7.5)
 	 */
@@ -4351,7 +4349,7 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	/* FIXME a USB 2.0 device may morph into SuperSpeed on reset. */
 	retval = hub_port_reset(hub, port1, udev, delay, false);
 	if (retval < 0)		/* error or disconnect */ {
-		printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
+
 		goto fail;
 	}
 	/* success, speed is known */
@@ -4362,7 +4360,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	if (oldspeed != USB_SPEED_UNKNOWN && oldspeed != udev->speed &&
 	    !(oldspeed == USB_SPEED_SUPER && udev->speed > oldspeed)) {
 		dev_dbg(&udev->dev, "device reset changed speed!\n");
-		printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 		goto fail;
 	}
 	oldspeed = udev->speed;
@@ -4392,7 +4389,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 		udev->ep0.desc.wMaxPacketSize = cpu_to_le16(8);
 		break;
 	default:
-		printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 		goto fail;
 	}
 
@@ -4418,7 +4414,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 			&& hdev->speed == USB_SPEED_HIGH) {
 		if (!hub->tt.hub) {
 			dev_err(&udev->dev, "parent hub has no TT\n");
-			printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 			retval = -EINVAL;
 			goto fail;
 		}
@@ -4451,14 +4446,12 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 				dev_err(&udev->dev,
 					"hub failed to enable device, error %d\n",
 					retval);
-				printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 				goto fail;
 			}
 
 #define GET_DESCRIPTOR_BUFSIZE	64
 			buf = kmalloc(GET_DESCRIPTOR_BUFSIZE, GFP_NOIO);
 			if (!buf) {
-				printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 				retval = -ENOMEM;
 				continue;
 			}
@@ -4502,14 +4495,12 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 
 			retval = hub_port_reset(hub, port1, udev, delay, false);
 			if (retval < 0)		/* error or disconnect */ {
-				printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 				goto fail;
 			}
 			if (oldspeed != udev->speed) {
 				dev_dbg(&udev->dev,
 					"device reset changed speed!\n");
 				retval = -ENODEV;
-				printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 				goto fail;
 			}
 			if (r) {
@@ -4518,7 +4509,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 						"device no response, device descriptor read/64, error %d\n",
 							r);
 				retval = -EMSGSIZE;
-				printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 				continue;
 			}
 #undef GET_DESCRIPTOR_BUFSIZE
@@ -4540,7 +4530,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 				if (retval != -ENODEV)
 					dev_err(&udev->dev, "device not accepting address %d, error %d\n",
 							devnum, retval);
-				printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 				goto fail;
 			}
 			if (udev->speed >= USB_SPEED_SUPER) {
@@ -4579,7 +4568,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 		}
 	}
 	if (retval) {
-		printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 		goto fail;
 	}
 
@@ -4596,7 +4584,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 		hub_port_reset(hub, port1, udev,
 				HUB_BH_RESET_TIME, true);
 		retval = -EINVAL;
-		printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 		goto fail;
 	}
 
@@ -4627,7 +4614,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 					retval);
 		if (retval >= 0)
 			retval = -ENOMSG;
-		printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 		goto fail;
 	}
 
@@ -4647,7 +4633,6 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 		hcd->driver->update_device(hcd, udev);
 	hub_set_initial_usb2_lpm_policy(udev);
 fail:
-	printk("###############  ERR  %s()    line %d\n", __func__, __LINE__); // edikk
 	if (retval) {
 		hub_port_disable(hub, port1, 0);
 		update_devnum(udev, devnum);	/* for disconnect processing */
@@ -4742,8 +4727,6 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 	struct usb_device *udev = port_dev->child;
 	static int unreliable_port = -1;
 
-	//printk("###############   %s()    line %d\n", __func__, __LINE__); // edikk
-
 	/* Disconnect any existing devices under this port */
 	if (udev) {
 		if (hcd->usb_phy && !hdev->parent)
@@ -4832,7 +4815,6 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 		status = hub_port_init(hub, udev, port1, i);
 		usb_unlock_port(port_dev);
 		if (status < 0) {
-			printk("###############  Wrong  %s()    line %d\n", __func__, __LINE__); // edikk
 			goto loop;
 		}
 
@@ -5431,8 +5413,6 @@ static int usb_reset_and_verify_device(struct usb_device *udev)
 	struct usb_host_bos		*bos;
 	int				i, j, ret = 0;
 	int				port1 = udev->portnum;
-
-	//printk("###############   %s()    line %d\n", __func__, __LINE__); // edikk
 
 	if (udev->state == USB_STATE_NOTATTACHED ||
 			udev->state == USB_STATE_SUSPENDED) {

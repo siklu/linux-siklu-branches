@@ -166,7 +166,7 @@ static const struct of_device_id fec_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, fec_dt_ids);
 
-static unsigned char macaddr[ETH_ALEN] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 }; // edikk this value for test only!
+static unsigned char macaddr[ETH_ALEN] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 }; // this value for test only!
 module_param_array(macaddr, byte, NULL, 0);
 MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 

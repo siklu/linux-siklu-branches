@@ -351,8 +351,6 @@ static int i2c_slave_mode_thread(void* data)
 #endif // 0
 
 	} while (1);
-	debugp("######>> %s()   line %d\n", __func__, __LINE__);
-
 	return 0;
 }
 
@@ -731,7 +729,7 @@ static void i2c_imx_isr_slave_event(struct imx_i2c_struct *i2c_imx, uint32_t i2s
 	static int call_count = 0;
 
 	call_count++;
-	// i2c_imx->i2csr = 0;   edikk de we need clean here ???
+	// i2c_imx->i2csr = 0;   TBD do we need clean here ???
 	// read from i2dr  release SCL
 	val = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2DR);
 
@@ -1289,9 +1287,6 @@ static int imx_unreg_slave(struct i2c_client *slave)
 
 	WARN_ON(!priv->slave);
 
-	/*  edikk add configuration here
-
-	*/
 	priv->slave = NULL;
 	pm_runtime_allow(imx_i2c_priv_to_dev(priv));
 	return 0;

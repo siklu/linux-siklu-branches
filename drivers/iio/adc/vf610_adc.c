@@ -122,7 +122,7 @@ typedef enum {
 } SIKLU_NUM_SAMPLES_AVERA_E;
 
 static u32 siklu_num_samples_mask = (3<<14);
-static SIKLU_NUM_SAMPLES_AVERA_E siklu_num_samples = SIKLU_NUM_SAMPLES_AVERA_8; // edikk Alex put here desured val
+static SIKLU_NUM_SAMPLES_AVERA_E siklu_num_samples = SIKLU_NUM_SAMPLES_AVERA_8;
 
 
 

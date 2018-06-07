@@ -579,7 +579,6 @@ static int platform_drv_probe(struct device *_dev)
 
 
 	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
-		printk("###############  NOT SUP  %s()    line %d\n", __func__, __LINE__); // edikk
 		dev_warn(_dev, "probe deferral not supported\n");
 		ret = -ENXIO;
 	}
