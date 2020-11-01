@@ -203,6 +203,10 @@
 		compatible = "siklu,sfp10G";
 		reg = <0x50>;
 	};
+	sfp10G@51 {   /* siklu SFP 10G/1G */
+		compatible = "siklu,sfp10G_ddmi";
+		reg = <0x51>;
+	};
 };
 
 
