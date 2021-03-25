@@ -91,7 +91,7 @@ static int clear_poll_bit(void __iomem *addr, u32 mask)
 static int gpmi_reset_block(void __iomem *reset_addr, bool just_enable)
 {
 	int ret;
-	int timeout = 0x400;
+	int timeout = 1000000; // 1 second timeout, like in u-boot
 
 	/* clear and poll SFTRST */
 	ret = clear_poll_bit(reset_addr, MODULE_SFTRST);
@@ -101,14 +101,17 @@ static int gpmi_reset_block(void __iomem *reset_addr, bool just_enable)
 	/* clear CLKGATE */
 	writel(MODULE_CLKGATE, reset_addr + MXS_CLR_ADDR);
 
-	if (!just_enable) {
+	if (! just_enable)
+	{
 		/* set SFTRST to reset the block */
 		writel(MODULE_SFTRST, reset_addr + MXS_SET_ADDR);
-		udelay(1);
 
 		/* poll CLKGATE becoming set */
 		while ((!(readl(reset_addr) & MODULE_CLKGATE)) && --timeout)
-			/* nothing */;
+		{
+			udelay(1);
+		}
+
 		if (unlikely(!timeout))
 			goto error;
 	}
@@ -179,7 +182,6 @@ int gpmi_init(struct gpmi_nand_data *this)
 	ret = gpmi_reset_block(r->bch_regs, GPMI_IS_MX23(this));
 	if (ret)
 		goto err_out;
-
 
 	/* Choose NAND mode. */
 	writel(BM_GPMI_CTRL1_GPMI_MODE, r->gpmi_regs + HW_GPMI_CTRL1_CLR);
