@@ -5327,6 +5327,34 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.ptp_support = true,
 		.ops = &mv88e6390x_ops,
 	},
+	[MV88E6393] = {
+		/* See "88E6393X/88E6193X/88E6191X Switch Functional
+		 * Specification" Doc. No. MV-S111519-00, Rev. -- August 22,
+		 * 2018 */
+		.prod_num = MV88E6XXX_PORT_SWITCH_ID_PROD_6393,
+		.family = MV88E6XXX_FAMILY_6390,
+		.name = "Marvell 88E6393",
+		.num_databases = 4096,		/* page 49 Section 1.2.8 */
+		.num_macs = 16384,		/* page 4 table 1 */
+		.num_ports = 11,		/* 8x1G+3xSerDes page 4 table 1 */
+		.num_internal_phys = 8,		/* 8X1G page 202 Section 8.3 */
+		.num_gpio = 16,			/* page 477 table 401 */
+		.max_vid = 4095,		/* page 4 table 1,
+						   page 162 table 28 */
+		.port_base_addr = 0x0,
+		.phy_base_addr = 0x0,
+		.global1_addr = 0x1b,		/* page 356 Section 8.5 */
+		.global2_addr = 0x1c,		/* page 388 Section 8.6 */
+		.age_time_coeff = 3750,		/* page 43 Section 1.2.1 */
+		.g1_irqs = 9,			/* ? */
+		.g2_irqs = 14,			/* ? */
+		.atu_move_port_mask = 0x1f,	/* page 376 table 218 bits 14:4 */
+		.pvt = true,			/* page 401 table 239 */
+		.multi_chip = true,
+		.tag_protocol = DSA_TAG_PROTO_DSA,
+		.ptp_support = true,		/* page 552 */
+		.ops = &mv88e6390x_ops,
+	},
 };
 
 static const struct mv88e6xxx_info *mv88e6xxx_lookup_info(unsigned int prod_num)
@@ -5347,25 +5375,36 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
 	u16 id;
 	int err;
 
+	dev_err(chip->dev, "YBA: mv88e6xxx_detect: entered mv88e6xxx_detect\n");
+
 	mv88e6xxx_reg_lock(chip);
 	err = mv88e6xxx_port_read(chip, 0, MV88E6XXX_PORT_SWITCH_ID, &id);
+	dev_err(chip->dev, "YBA: mv88e6xxx_detect: id is [%d]\n", id);
 	mv88e6xxx_reg_unlock(chip);
-	if (err)
+	if (err) {
+		dev_err(chip->dev, "YBA: mv88e6xxx_detect: mv88e6xxx_port_read failed\n");
 		return err;
+	}
 
 	prod_num = id & MV88E6XXX_PORT_SWITCH_ID_PROD_MASK;
 	rev = id & MV88E6XXX_PORT_SWITCH_ID_REV_MASK;
+	dev_err(chip->dev, "YBA: mv88e6xxx_detect: rev is [%d]\n", rev);
 
 	info = mv88e6xxx_lookup_info(prod_num);
-	if (!info)
+	if (!info) {
+		dev_err(chip->dev, "YBA: mv88e6xxx_detect: mv88e6xxx_lookup_info failed for"
+			       " prod_num [%d]\n", prod_num);
 		return -ENODEV;
+	}
 
 	/* Update the compatible info with the probed one */
 	chip->info = info;
 
 	err = mv88e6xxx_g2_require(chip);
-	if (err)
+	if (err) {
+		dev_err(chip->dev, "YBA: mv88e6xxx_detect: mv88e6xxx_g2_require failed\n");
 		return err;
+	}
 
 	dev_info(chip->dev, "switch 0x%x detected: %s, revision %u\n",
 		 chip->info->prod_num, chip->info->name, rev);
@@ -5643,19 +5682,28 @@ static int mv88e6xxx_probe(struct mdio_device *mdiodev)
 	int port;
 	int err;
 
-	if (!np && !pdata)
+	dev_err(dev, "YBA: entered mv88e6xxx_probe\n");
+	if (!np && !pdata) {
+		dev_err(dev, "YBA: no pdata and no np\n");
 		return -EINVAL;
+	}
 
-	if (np)
+	if (np) {
+		dev_err(dev, "YBA: mv88e6xxx_probe: We have np\n");
 		compat_info = of_device_get_match_data(dev);
+	}
 
 	if (pdata) {
+		dev_err(dev, "YBA: mv88e6xxx_probe: We have pdata\n");
 		compat_info = pdata_device_get_match_data(dev);
 
-		if (!pdata->netdev)
+		if (!pdata->netdev) {
+			dev_err(dev, "YBA: mv88e6xxx_probe: no netdev\n");
 			return -EINVAL;
+		}
 
 		for (port = 0; port < DSA_MAX_PORTS; port++) {
+			dev_err(dev, "YBA: found port [%s]\n", pdata->cd.port_names[port]);
 			if (!(pdata->enabled_ports & (1 << port)))
 				continue;
 			if (strcmp(pdata->cd.port_names[port], "cpu"))
@@ -5664,33 +5712,45 @@ static int mv88e6xxx_probe(struct mdio_device *mdiodev)
 			break;
 		}
 	}
+	else
+		dev_err(dev, "YBA: mv88e6xxx_probe: no pdata\n");
 
-	if (!compat_info)
+	if (!compat_info) {
+		dev_err(dev, "YBA: mv88e6xxx_probe: no compat_info\n");
 		return -EINVAL;
+	}
 
 	chip = mv88e6xxx_alloc_chip(dev);
 	if (!chip) {
+		dev_err(dev, "YBA: mv88e6xxx_probe: no mv88e6xxx_alloc_chip\n");
 		err = -ENOMEM;
 		goto out;
 	}
 
 	chip->info = compat_info;
 
+	dev_err(dev, "YBA: calling mv88e6xxx_smi_init: addr [%d]\n", mdiodev->addr);
 	err = mv88e6xxx_smi_init(chip, mdiodev->bus, mdiodev->addr);
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_smi_init failed\n");
 		goto out;
+	}
 
 	chip->reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
 	if (IS_ERR(chip->reset)) {
 		err = PTR_ERR(chip->reset);
+		dev_err(dev, "YBA: chip->reset error\n");
 		goto out;
 	}
 	if (chip->reset)
 		usleep_range(1000, 2000);
 
+	usleep_range(1000, 2000); /* yba added this line, which doesn't seem to help */
 	err = mv88e6xxx_detect(chip);
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_detect error\n");
 		goto out;
+	}
 
 	mv88e6xxx_phy_init(chip);
 
@@ -5705,13 +5765,16 @@ static int mv88e6xxx_probe(struct mdio_device *mdiodev)
 	mv88e6xxx_reg_lock(chip);
 	err = mv88e6xxx_switch_reset(chip);
 	mv88e6xxx_reg_unlock(chip);
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_reg_unlock error\n");
 		goto out;
+	}
 
 	if (np) {
 		chip->irq = of_irq_get(np, 0);
 		if (chip->irq == -EPROBE_DEFER) {
 			err = chip->irq;
+			dev_err(dev, "YBA: probe_defer\n");
 			goto out;
 		}
 	}
@@ -5730,31 +5793,44 @@ static int mv88e6xxx_probe(struct mdio_device *mdiodev)
 		err = mv88e6xxx_irq_poll_setup(chip);
 	mv88e6xxx_reg_unlock(chip);
 
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_irq_poll_setup or mv88e6xxx_g1_irq_setup error\n");
 		goto out;
+	}
 
 	if (chip->info->g2_irqs > 0) {
 		err = mv88e6xxx_g2_irq_setup(chip);
-		if (err)
+		if (err) {
+			dev_err(dev, "YBA: mv88e6xxx_g2_irq_setup error\n");
 			goto out_g1_irq;
+		}
 	}
 
 	err = mv88e6xxx_g1_atu_prob_irq_setup(chip);
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_g1_atu_prob_irq_setup error\n");
 		goto out_g2_irq;
+	}
 
 	err = mv88e6xxx_g1_vtu_prob_irq_setup(chip);
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_g1_vtu_prob_irq_setup error\n");
 		goto out_g1_atu_prob_irq;
+	}
 
 	err = mv88e6xxx_mdios_register(chip, np);
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_mdios_register error\n");
 		goto out_g1_vtu_prob_irq;
+	}
 
 	err = mv88e6xxx_register_switch(chip);
-	if (err)
+	if (err) {
+		dev_err(dev, "YBA: mv88e6xxx_register_switch error\n");
 		goto out_mdio;
+	}
 
+	dev_err(dev, "YBA: probe done\n");
 	return 0;
 
 out_mdio:
@@ -5775,6 +5851,7 @@ out:
 	if (pdata)
 		dev_put(pdata->netdev);
 
+	dev_err(dev, "YBA: probe done, error\n");
 	return err;
 }
 

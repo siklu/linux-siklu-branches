@@ -163,13 +163,16 @@ static const struct mv88e6xxx_bus_ops mv88e6xxx_smi_indirect_ops = {
 int mv88e6xxx_smi_init(struct mv88e6xxx_chip *chip,
 		       struct mii_bus *bus, int sw_addr)
 {
-	if (chip->info->dual_chip)
+	if (chip->info->dual_chip) {
+		dev_err(chip->dev, "YBA: mv88e6xxx_smi_init: dual_chip\n");
 		chip->smi_ops = &mv88e6xxx_smi_dual_direct_ops;
-	else if (sw_addr == 0)
+	} else if (sw_addr == 0) {
+		dev_err(chip->dev, "YBA: mv88e6xxx_smi_init: sw_addr = 0\n");
 		chip->smi_ops = &mv88e6xxx_smi_direct_ops;
-	else if (chip->info->multi_chip)
+	} else if (chip->info->multi_chip) {
+		dev_err(chip->dev, "YBA: mv88e6xxx_smi_init: multi_chip\n");
 		chip->smi_ops = &mv88e6xxx_smi_indirect_ops;
-	else
+	} else
 		return -EINVAL;
 
 	chip->bus = bus;

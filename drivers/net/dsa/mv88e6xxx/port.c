@@ -22,6 +22,9 @@ int mv88e6xxx_port_read(struct mv88e6xxx_chip *chip, int port, int reg,
 {
 	int addr = chip->info->port_base_addr + port;
 
+	dev_err(chip->dev, "YBA: mv88e6xxx_port_read: port_base_addr [%d], "
+			"port [%d], reg [%d]\n", chip->info->port_base_addr, port, reg);
+
 	return mv88e6xxx_read(chip, addr, reg, val);
 }
 
