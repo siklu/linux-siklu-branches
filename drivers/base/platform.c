@@ -559,8 +559,11 @@ static int platform_drv_probe(struct device *_dev)
 	int ret;
 
 	ret = of_clk_set_defaults(_dev->of_node, false);
-	if (ret < 0)
+	if (ret < 0) {
+		printk("ERROR %s()    line %d\n", __func__, __LINE__);
 		return ret;
+	}
+
 
 	ret = dev_pm_domain_attach(_dev, true);
 	if (ret != -EPROBE_DEFER) {
@@ -574,11 +577,11 @@ static int platform_drv_probe(struct device *_dev)
 		}
 	}
 
+
 	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
 		dev_warn(_dev, "probe deferral not supported\n");
 		ret = -ENXIO;
 	}
-
 	return ret;
 }
 

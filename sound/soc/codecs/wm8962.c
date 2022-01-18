@@ -2,6 +2,7 @@
  * wm8962.c  --  WM8962 ALSA SoC Audio driver
  *
  * Copyright 2010-2 Wolfson Microelectronics plc
+ * Copyright 2017 NXP
  *
  * Author: Mark Brown <broonie@opensource.wolfsonmicro.com>
  *
@@ -1781,8 +1782,11 @@ SND_SOC_BYTES("HD Bass Coefficients", WM8962_HDBASS_AI_1, 30),
 
 SOC_DOUBLE("ALC Switch", WM8962_ALC1, WM8962_ALCL_ENA_SHIFT,
 		WM8962_ALCR_ENA_SHIFT, 1, 0),
-SND_SOC_BYTES_MASK("ALC Coefficients", WM8962_ALC1, 4,
+SND_SOC_BYTES_MASK("ALC1", WM8962_ALC1, 1,
 		WM8962_ALCL_ENA_MASK | WM8962_ALCR_ENA_MASK),
+SND_SOC_BYTES("ALC2", WM8962_ALC2, 1),
+SND_SOC_BYTES("ALC3", WM8962_ALC3, 1),
+SND_SOC_BYTES("Noise Gate", WM8962_NOISE_GATE, 1),
 };
 
 static const struct snd_kcontrol_new wm8962_spk_mono_controls[] = {
@@ -2558,11 +2562,17 @@ static int wm8962_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8962_priv *wm8962 = snd_soc_codec_get_drvdata(codec);
+	snd_pcm_format_t sample_format = params_format(params);
 	int i;
 	int aif0 = 0;
 	int adctl3 = 0;
 
-	wm8962->bclk = snd_soc_params_to_bclk(params);
+	if (sample_format == SNDRV_PCM_FORMAT_S20_3LE)
+		wm8962->bclk = params_rate(params) *
+				params_channels(params) *
+				params_physical_width(params);
+	else
+		wm8962->bclk = snd_soc_params_to_bclk(params);
 	if (params_channels(params) == 1)
 		wm8962->bclk *= 2;
 

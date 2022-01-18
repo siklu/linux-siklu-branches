@@ -166,6 +166,8 @@ struct mii_bus {
 	void *priv;
 	int (*read)(struct mii_bus *bus, int addr, int regnum);
 	int (*write)(struct mii_bus *bus, int addr, int regnum, u16 val);
+	int (*read45)(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr);  // clause45 op
+	int (*write45)(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr, u16 val); // clause45 op
 	int (*reset)(struct mii_bus *bus);
 
 	/*
@@ -818,6 +820,7 @@ void phy_print_status(struct phy_device *phydev);
 void phy_device_free(struct phy_device *phydev);
 int phy_set_max_speed(struct phy_device *phydev, u32 max_speed);
 
+int phy_scan_fixups(struct phy_device *phydev);
 int phy_register_fixup(const char *bus_id, u32 phy_uid, u32 phy_uid_mask,
 		       int (*run)(struct phy_device *));
 int phy_register_fixup_for_id(const char *bus_id,

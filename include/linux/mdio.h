@@ -238,6 +238,10 @@ int mdiobus_read_nested(struct mii_bus *bus, int addr, u32 regnum);
 int mdiobus_write(struct mii_bus *bus, int addr, u32 regnum, u16 val);
 int mdiobus_write_nested(struct mii_bus *bus, int addr, u32 regnum, u16 val);
 
+// Clause45 functions
+int mdiobus_read45(struct mii_bus *bus, int phy_addr, int dev_addr, u32 reg_addr);
+int mdiobus_write45(struct mii_bus *bus, int phy_addr, int dev_addr, u32 reg_addr, u16 val);
+
 int mdiobus_register_device(struct mdio_device *mdiodev);
 int mdiobus_unregister_device(struct mdio_device *mdiodev);
 bool mdiobus_is_registered_device(struct mii_bus *bus, int addr);

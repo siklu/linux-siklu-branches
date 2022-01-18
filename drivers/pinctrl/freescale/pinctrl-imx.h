@@ -83,10 +83,12 @@ struct imx_pinctrl_soc_info {
 	unsigned int nfunctions;
 	unsigned int flags;
 	const char *gpr_compatible;
+	unsigned int mux_mask;
 };
 
 #define SHARE_MUX_CONF_REG	0x1
 #define ZERO_OFFSET_VALID	0x2
+#define CONFIG_IBE_OBE		0x4
 
 #define NO_MUX		0x0
 #define NO_PAD		0x0
@@ -99,4 +101,6 @@ struct imx_pinctrl_soc_info {
 
 int imx_pinctrl_probe(struct platform_device *pdev,
 			struct imx_pinctrl_soc_info *info);
+int imx_pinctrl_suspend(struct device *dev);
+int imx_pinctrl_resume(struct device *dev);
 #endif /* __DRIVERS_PINCTRL_IMX_H */

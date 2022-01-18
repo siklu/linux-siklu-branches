@@ -241,7 +241,8 @@ static void dw_pcie_prog_outbound_atu(struct pcie_port *pp, int index,
 		if (val == PCIE_ATU_ENABLE)
 			return;
 
-		usleep_range(LINK_WAIT_IATU_MIN, LINK_WAIT_IATU_MAX);
+		if (!IS_ENABLED(CONFIG_PCI_IMX6))
+			usleep_range(LINK_WAIT_IATU_MIN, LINK_WAIT_IATU_MAX);
 	}
 	dev_err(pp->dev, "iATU is not being enabled\n");
 }
@@ -294,6 +295,28 @@ void dw_pcie_msi_init(struct pcie_port *pp)
 			    (u32)(msi_target & 0xffffffff));
 	dw_pcie_wr_own_conf(pp, PCIE_MSI_ADDR_HI, 4,
 			    (u32)(msi_target >> 32 & 0xffffffff));
+}
+
+void dw_pcie_msi_cfg_store(struct pcie_port *pp)
+{
+	int i;
+
+	for (i = 0; i < MAX_MSI_CTRLS; i++)
+		dw_pcie_rd_own_conf(pp, PCIE_MSI_INTR0_ENABLE + i * 12, 4,
+				&pp->msi_enable[i]);
+}
+
+void dw_pcie_msi_cfg_restore(struct pcie_port *pp)
+{
+	int i;
+
+	for (i = 0; i < MAX_MSI_CTRLS; i++) {
+		dw_pcie_wr_own_conf(pp, PCIE_MSI_ADDR_LO, 4,
+				virt_to_phys((void *)pp->msi_data));
+		dw_pcie_wr_own_conf(pp, PCIE_MSI_ADDR_HI, 4, 0);
+		dw_pcie_wr_own_conf(pp, PCIE_MSI_INTR0_ENABLE + i * 12, 4,
+				pp->msi_enable[i]);
+	}
 }
 
 static void dw_pcie_msi_clear_irq(struct pcie_port *pp, int irq)
@@ -637,8 +660,11 @@ int dw_pcie_host_init(struct pcie_port *pp)
 		}
 	}
 
-	if (pp->ops->host_init)
-		pp->ops->host_init(pp);
+	if (pp->ops->host_init) {
+		ret = pp->ops->host_init(pp);
+		if (ret < 0)
+			return ret;
+	}
 
 	pp->root_bus_nr = pp->busn->start;
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
@@ -882,9 +908,11 @@ void dw_pcie_setup_rc(struct pcie_port *pp)
 		dev_dbg(pp->dev, "iATU unroll: %s\n",
 			pp->iatu_unroll_enabled ? "enabled" : "disabled");
 
-		dw_pcie_prog_outbound_atu(pp, PCIE_ATU_REGION_INDEX0,
-					  PCIE_ATU_TYPE_MEM, pp->mem_base,
-					  pp->mem_bus_addr, pp->mem_size);
+		if (!IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)
+			&& !IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS))
+			dw_pcie_prog_outbound_atu(pp, PCIE_ATU_REGION_INDEX0,
+						  PCIE_ATU_TYPE_MEM, pp->mem_base,
+						  pp->mem_bus_addr, pp->mem_size);
 		if (pp->num_viewport > 2)
 			dw_pcie_prog_outbound_atu(pp, PCIE_ATU_REGION_INDEX2,
 						  PCIE_ATU_TYPE_IO, pp->io_base,

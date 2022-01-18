@@ -16,6 +16,7 @@
 #include <linux/completion.h>
 #include <linux/device.h>
 #include <linux/delay.h>
+#include <linux/of.h>
 #include <linux/pagemap.h>
 #include <linux/err.h>
 #include <linux/leds.h>
@@ -2832,7 +2833,8 @@ void mmc_start_host(struct mmc_host *host)
 	mmc_release_host(host);
 
 	mmc_gpiod_request_cd_irq(host);
-	_mmc_detect_change(host, 0, false);
+	if (!(host->caps2 & MMC_CAP2_CD_POST))
+		_mmc_detect_change(host, 0, false);
 }
 
 void mmc_stop_host(struct mmc_host *host)
@@ -3026,9 +3028,48 @@ void mmc_init_context_info(struct mmc_host *host)
 	init_waitqueue_head(&host->context_info.wait);
 }
 
+static int __mmc_max_reserved_idx = -1;
+
+/**
+ * mmc_first_nonreserved_index() - get the first index that is not reserved
+ */
+int mmc_first_nonreserved_index(void)
+{
+	return __mmc_max_reserved_idx + 1;
+}
+EXPORT_SYMBOL(mmc_first_nonreserved_index);
+
+/**
+ * mmc_get_reserved_index() - get the index reserved for this host
+ *
+ * Return: The index reserved for this host or negative error value if
+ *         no index is reserved for this host
+ */
+int mmc_get_reserved_index(struct mmc_host *host)
+{
+	return of_alias_get_id(host->parent->of_node, "mmc");
+}
+EXPORT_SYMBOL(mmc_get_reserved_index);
+
+static void mmc_of_reserve_idx(void)
+{
+	int max;
+
+	max = of_alias_max_index("mmc");
+	if (max < 0)
+		return;
+
+	__mmc_max_reserved_idx = max;
+
+	pr_debug("MMC: reserving %d slots for of aliases\n",
+			__mmc_max_reserved_idx + 1);
+}
+
 static int __init mmc_init(void)
 {
 	int ret;
+
+	mmc_of_reserve_idx();
 
 	ret = mmc_register_bus();
 	if (ret)

@@ -3,7 +3,8 @@
  *
  * Author: Timur Tabi <timur@freescale.com>
  *
- * Copyright 2007-2010 Freescale Semiconductor, Inc.
+ * Copyright 2007-2015, Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -43,6 +44,8 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -667,6 +670,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	if (ret)
 		return ret;
 
+	pm_runtime_get_sync(dai->dev);
+
 	/* When using dual fifo mode, it is safer to ensure an even period
 	 * size. If appearing to an odd number while DMA always starts its
 	 * task from fifo0, fifo1 would be neglected at the end of each
@@ -689,6 +694,8 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct fsl_ssi_private *ssi_private =
 		snd_soc_dai_get_drvdata(rtd->cpu_dai);
+
+	pm_runtime_put_sync(dai->dev);
 
 	clk_disable_unprepare(ssi_private->clk);
 
@@ -715,12 +722,24 @@ static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
 	u64 sub, savesub = 100000;
 	unsigned int freq;
 	bool baudclk_is_used;
+	snd_pcm_format_t sample_format = params_format(hw_params);
 
 	/* Prefer the explicitly set bitclock frequency */
 	if (ssi_private->bitclk_freq)
 		freq = ssi_private->bitclk_freq;
-	else
-		freq = params_channels(hw_params) * 32 * params_rate(hw_params);
+	else {
+		if (params_channels(hw_params) == 1) {
+			freq = 2 * params_width(hw_params) *
+					params_rate(hw_params);
+
+			if (sample_format == SNDRV_PCM_FORMAT_S20_3LE)
+				freq = 2 * params_physical_width(hw_params) *
+						params_rate(hw_params);
+		} else {
+			freq = params_channels(hw_params) * 32 *
+					params_rate(hw_params);
+		}
+	}
 
 	/* Don't apply it to any non-baudclk circumstance */
 	if (IS_ERR(ssi_private->baudclk))
@@ -839,16 +858,7 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	int ret;
 	u32 scr_val;
 	int enabled;
-
-	regmap_read(regs, CCSR_SSI_SCR, &scr_val);
-	enabled = scr_val & CCSR_SSI_SCR_SSIEN;
-
-	/*
-	 * If we're in synchronous mode, and the SSI is already enabled,
-	 * then STCCR is already set properly.
-	 */
-	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates)
-		return 0;
+	u8 i2smode = ssi_private->i2s_mode;
 
 	if (fsl_ssi_is_i2s_master(ssi_private)) {
 		ret = fsl_ssi_set_bclk(substream, cpu_dai, hw_params);
@@ -865,8 +875,17 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
+	regmap_read(regs, CCSR_SSI_SCR, &scr_val);
+	enabled = scr_val & CCSR_SSI_SCR_SSIEN;
+
+	/*
+	 * If we're in synchronous mode, and the SSI is already enabled,
+	 * then STCCR is already set properly.
+	 */
+	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates)
+		return 0;
+
 	if (!fsl_ssi_is_ac97(ssi_private)) {
-		u8 i2smode;
 		/*
 		 * Switch to normal net mode in order to have a frame sync
 		 * signal every 32 bits instead of 16 bits
@@ -874,13 +893,13 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		if (fsl_ssi_is_i2s_cbm_cfs(ssi_private) && sample_size == 16)
 			i2smode = CCSR_SSI_SCR_I2S_MODE_NORMAL |
 				CCSR_SSI_SCR_NET;
-		else
-			i2smode = ssi_private->i2s_mode;
-
-		regmap_update_bits(regs, CCSR_SSI_SCR,
-				CCSR_SSI_SCR_NET | CCSR_SSI_SCR_I2S_MODE_MASK,
-				channels == 1 ? 0 : i2smode);
+		if (channels == 1)
+			i2smode = 0;
 	}
+
+	regmap_update_bits(regs, CCSR_SSI_SCR,
+			   CCSR_SSI_SCR_NET | CCSR_SSI_SCR_I2S_MODE_MASK,
+			   i2smode);
 
 	/*
 	 * FIXME: The documentation says that SxCCR[WL] should not be
@@ -938,7 +957,7 @@ static int _fsl_ssi_set_dai_fmt(struct device *dev,
 	fsl_ssi_setup_reg_vals(ssi_private);
 
 	regmap_read(regs, CCSR_SSI_SCR, &scr);
-	scr &= ~(CCSR_SSI_SCR_SYN | CCSR_SSI_SCR_I2S_MODE_MASK);
+	scr &= ~CCSR_SSI_SCR_SYN;
 	scr |= CCSR_SSI_SCR_SYNC_TX_FS;
 
 	mask = CCSR_SSI_STCR_TXBIT0 | CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR |
@@ -994,7 +1013,6 @@ static int _fsl_ssi_set_dai_fmt(struct device *dev,
 	default:
 		return -EINVAL;
 	}
-	scr |= ssi_private->i2s_mode;
 
 	/* DAI clock inversion */
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
@@ -1201,7 +1219,7 @@ static int fsl_ssi_dai_probe(struct snd_soc_dai *dai)
 
 static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
 	.startup	= fsl_ssi_startup,
-	.shutdown       = fsl_ssi_shutdown,
+	.shutdown	= fsl_ssi_shutdown,
 	.hw_params	= fsl_ssi_hw_params,
 	.hw_free	= fsl_ssi_hw_free,
 	.set_fmt	= fsl_ssi_set_dai_fmt,
@@ -1346,6 +1364,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 	struct device_node *np = pdev->dev.of_node;
 	u32 dmas[4];
 	int ret;
+	u32 buffer_size;
 
 	if (ssi_private->has_ipg_clk_name)
 		ssi_private->clk = devm_clk_get(&pdev->dev, "ipg");
@@ -1392,6 +1411,9 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		ssi_private->dma_params_rx.maxburst &= ~0x1;
 	}
 
+	if (of_property_read_u32(np, "fsl,dma-buffer-size", &buffer_size))
+		buffer_size = IMX_SSI_DMABUF_SIZE;
+
 	if (!ssi_private->use_dma) {
 
 		/*
@@ -1412,7 +1434,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		if (ret)
 			goto error_pcm;
 	} else {
-		ret = imx_pcm_dma_init(pdev, IMX_SSI_DMABUF_SIZE);
+		ret = imx_pcm_dma_init(pdev, buffer_size);
 		if (ret)
 			goto error_pcm;
 	}
@@ -1542,6 +1564,8 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 	else
                 /* Older 8610 DTs didn't have the fifo-depth property */
 		ssi_private->fifo_depth = 8;
+
+	pm_runtime_enable(&pdev->dev);
 
 	dev_set_drvdata(&pdev->dev, ssi_private);
 
@@ -1693,8 +1717,24 @@ static int fsl_ssi_resume(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
+#ifdef CONFIG_PM
+static int fsl_ssi_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static int fsl_ssi_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+#endif
+
 static const struct dev_pm_ops fsl_ssi_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(fsl_ssi_suspend, fsl_ssi_resume)
+	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend, fsl_ssi_runtime_resume,
+			   NULL)
 };
 
 static struct platform_driver fsl_ssi_driver = {

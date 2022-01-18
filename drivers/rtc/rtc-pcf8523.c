@@ -294,10 +294,19 @@ static int pcf8523_probe(struct i2c_client *client,
 	err = pcf8523_select_capacitance(client, true);
 	if (err < 0)
 		return err;
-
+#ifndef CONFIG_SIKLU_BOARD
 	err = pcf8523_set_pm(client, 0);
-	if (err < 0)
-		return err;
+#else // siklu
+
+	(void)pcf8523_set_pm; // prevent compiler warning
+	   /* battery switch-over function is enabled in direct switching mode;
+	       battery low detection function is disabled */
+	   // replace control PM value from 0xA0 to 0x80 11 July 2016
+	   // err = pcf8523_write(client, REG_CONTROL3, 0xA0);
+	   err = pcf8523_write(client, REG_CONTROL3, 0x80);  // siklu_remark008
+	   if (err < 0)
+	       return err;
+#endif
 
 	pcf->rtc = devm_rtc_device_register(&client->dev, DRIVER_NAME,
 				       &pcf8523_rtc_ops, THIS_MODULE);

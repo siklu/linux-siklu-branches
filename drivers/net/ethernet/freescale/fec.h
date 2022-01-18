@@ -15,11 +15,13 @@
 
 #include <linux/clocksource.h>
 #include <linux/net_tstamp.h>
+#include <linux/pm_qos.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
 
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x) || \
-    defined(CONFIG_M520x) || defined(CONFIG_M532x) || defined(CONFIG_ARM)
+    defined(CONFIG_M520x) || defined(CONFIG_M532x) || defined(CONFIG_ARM) || \
+    defined(CONFIG_ARM64)
 /*
  *	Just figures, Motorola would have to change the offsets for
  *	registers in the same peripheral device on different models
@@ -194,7 +196,7 @@
  *	Evidently, ARM SoCs have the FEC block generated in a
  *	little endian mode so adjust endianness accordingly.
  */
-#if defined(CONFIG_ARM)
+#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
 #define fec32_to_cpu le32_to_cpu
 #define fec16_to_cpu le16_to_cpu
 #define cpu_to_fec32 cpu_to_le32
@@ -292,7 +294,7 @@ struct bufdesc_ex {
 
 
 /* This device has up to three irqs on some platforms */
-#define FEC_IRQ_NUM		3
+#define FEC_IRQ_NUM		4
 
 /* Maximum number of queues supported
  * ENET with AVB IP can support up to 3 independent tx queues and rx queues.
@@ -353,6 +355,8 @@ struct bufdesc_ex {
 #define FLAG_RX_CSUM_ENABLED	(BD_ENET_RX_ICE | BD_ENET_RX_PCR)
 #define FLAG_RX_CSUM_ERROR	(BD_ENET_RX_ICE | BD_ENET_RX_PCR)
 
+#define FEC0_MII_BUS_SHARE_TRUE	1
+
 /* Interrupt events/masks. */
 #define FEC_ENET_HBERR  ((uint)0x80000000)      /* Heartbeat error */
 #define FEC_ENET_BABR   ((uint)0x40000000)      /* Babbling receiver */
@@ -377,6 +381,8 @@ struct bufdesc_ex {
 #define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII | FEC_ENET_TS_TIMER)
 #define FEC_NAPI_IMASK	(FEC_ENET_MII | FEC_ENET_TS_TIMER)
 #define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_RXF))
+
+#define FEC_ENET_ETHEREN	((uint)0x00000002)
 
 /* ENET interrupt coalescing macro define */
 #define FEC_ITR_CLK_SEL		(0x1 << 30)
@@ -446,6 +452,15 @@ struct bufdesc_ex {
 #define FEC_QUIRK_HAS_COALESCE		(1 << 13)
 /* Interrupt doesn't wake CPU from deep idle */
 #define FEC_QUIRK_ERR006687		(1 << 14)
+/*
+ * i.MX6Q/DL ENET cannot wake up system in wait mode because ENET tx & rx
+ * interrupt signal don't connect to GPC. So use pm qos to avoid cpu enter
+ * to wait mode.
+ */
+#define FEC_QUIRK_BUG_WAITMODE		(1 << 15)
+
+/* PHY fixup flag define */
+#define FEC_QUIRK_AR8031_FIXUP		(1 << 0)
 
 struct bufdesc_prop {
 	int qid;
@@ -458,6 +473,12 @@ struct bufdesc_prop {
 	unsigned short ring_size;
 	unsigned char dsize;
 	unsigned char dsize_log2;
+};
+
+struct fec_enet_stop_mode {
+	struct regmap *gpr;
+	u8 req_gpr;
+	u8 req_bit;
 };
 
 struct fec_enet_priv_tx_q {
@@ -522,10 +543,13 @@ struct fec_enet_private {
 	/* Phylib and MDIO interface */
 	struct	mii_bus *mii_bus;
 	int	mii_timeout;
+	int	mii_bus_share;
+	bool	active_in_suspend;
 	uint	phy_speed;
 	phy_interface_t	phy_interface;
 	struct device_node *phy_node;
 	int	link;
+	bool	fixed_link;
 	int	full_duplex;
 	int	speed;
 	struct	completion mdio_done;
@@ -533,7 +557,9 @@ struct fec_enet_private {
 	bool	bufdesc_ex;
 	int	pause_flag;
 	int	wol_flag;
+	int	wake_irq;
 	u32	quirks;
+	u32	fixups;
 
 	struct	napi_struct napi;
 	int	csum_flags;
@@ -553,6 +579,7 @@ struct fec_enet_private {
 	int hwts_tx_en;
 	struct delayed_work time_keep;
 	struct regulator *reg_phy;
+	struct pm_qos_request pm_qos_req;
 
 	unsigned int tx_align;
 	unsigned int rx_align;
@@ -576,6 +603,8 @@ struct fec_enet_private {
 	unsigned int next_counter;
 
 	u64 ethtool_stats[0];
+
+	struct fec_enet_stop_mode gpr;
 };
 
 void fec_ptp_init(struct platform_device *pdev);
@@ -584,6 +613,8 @@ void fec_ptp_start_cyclecounter(struct net_device *ndev);
 int fec_ptp_set(struct net_device *ndev, struct ifreq *ifr);
 int fec_ptp_get(struct net_device *ndev, struct ifreq *ifr);
 uint fec_ptp_check_pps_event(struct fec_enet_private *fep);
+void fec_enet_register_fixup(struct net_device *ndev);
+int of_fec_enet_parse_fixup(struct device_node *np);
 
 /****************************************************************************/
 #endif /* FEC_H */

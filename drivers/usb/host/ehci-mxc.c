@@ -74,6 +74,7 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 		ret = PTR_ERR(hcd->regs);
 		goto err_alloc;
 	}
+
 	hcd->rsrc_start = res->start;
 	hcd->rsrc_len = resource_size(res);
 
@@ -102,7 +103,6 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 		priv->phyclk = NULL;
 	if (priv->phyclk)
 		clk_prepare_enable(priv->phyclk);
-
 
 	/* call platform specific init function */
 	if (pdata->init) {
@@ -147,11 +147,12 @@ static int ehci_mxc_drv_probe(struct platform_device *pdev)
 	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (ret)
 		goto err_add;
-
 	device_wakeup_enable(hcd->self.controller);
+
 	return 0;
 
 err_add:
+
 	if (pdata && pdata->exit)
 		pdata->exit(pdev);
 err_init:
@@ -208,7 +209,6 @@ static int __init ehci_mxc_init(void)
 		return -ENODEV;
 
 	pr_info("%s: " DRIVER_DESC "\n", hcd_name);
-
 	ehci_init_driver(&ehci_mxc_hc_driver, &ehci_mxc_overrides);
 	return platform_driver_register(&ehci_mxc_driver);
 }

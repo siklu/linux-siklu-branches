@@ -1,7 +1,7 @@
 /*
  * Freescale Vybrid vf610 ADC driver
  *
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright 2013-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,6 +112,19 @@
 #define VF610_VTEMP25_3V3		867
 /* Typical sensor slope coefficient at all temperatures */
 #define VF610_TEMP_SLOPE_COEFF		1840
+
+typedef enum {
+	SIKLU_NUM_SAMPLES_AVERA_4	= (0<<14),
+	SIKLU_NUM_SAMPLES_AVERA_8	= (1<<14),
+	SIKLU_NUM_SAMPLES_AVERA_16	= (2<<14),
+	SIKLU_NUM_SAMPLES_AVERA_32	= (3<<14),
+
+} SIKLU_NUM_SAMPLES_AVERA_E;
+
+static u32 siklu_num_samples_mask = (3<<14);
+static SIKLU_NUM_SAMPLES_AVERA_E siklu_num_samples = SIKLU_NUM_SAMPLES_AVERA_8;
+
+
 
 enum clk_sel {
 	VF610_ADCIOC_BUSCLK_SET,
@@ -258,8 +271,8 @@ static inline void vf610_adc_cfg_init(struct vf610_adc *info)
 static void vf610_adc_cfg_post_set(struct vf610_adc *info)
 {
 	struct vf610_adc_feature *adc_feature = &info->adc_feature;
-	int cfg_data = 0;
-	int gc_data = 0;
+	u32 cfg_data = 0;
+	u32 gc_data = 0;
 
 	switch (adc_feature->clk_sel) {
 	case VF610_ADCIOC_ALTCLK_SET:
@@ -296,8 +309,13 @@ static void vf610_adc_cfg_post_set(struct vf610_adc *info)
 	if (adc_feature->ovwren)
 		cfg_data |= VF610_ADC_OVWREN;
 
+	cfg_data &= ~siklu_num_samples_mask;
+	cfg_data |= siklu_num_samples;
+
 	writel(cfg_data, info->regs + VF610_REG_ADC_CFG);
 	writel(gc_data, info->regs + VF610_REG_ADC_GC);
+
+	// printk( "%s() cfg_data 0x%x,  gc_data 0x%x\n", __func__, cfg_data, gc_data); // 
 }
 
 static void vf610_adc_calibration(struct vf610_adc *info)
@@ -327,7 +345,7 @@ static void vf610_adc_calibration(struct vf610_adc *info)
 static void vf610_adc_cfg_set(struct vf610_adc *info)
 {
 	struct vf610_adc_feature *adc_feature = &(info->adc_feature);
-	int cfg_data;
+	u32 cfg_data;
 
 	cfg_data = readl(info->regs + VF610_REG_ADC_CFG);
 
@@ -338,6 +356,9 @@ static void vf610_adc_cfg_set(struct vf610_adc *info)
 	cfg_data &= ~VF610_ADC_ADHSC_EN;
 	if (adc_feature->conv_mode == VF610_ADC_CONV_HIGH_SPEED)
 		cfg_data |= VF610_ADC_ADHSC_EN;
+
+	cfg_data &= ~siklu_num_samples_mask;
+	cfg_data |= siklu_num_samples;
 
 	writel(cfg_data, info->regs + VF610_REG_ADC_CFG);
 }
@@ -453,6 +474,9 @@ static void vf610_adc_sample_set(struct vf610_adc *info)
 		dev_err(info->dev,
 			"error hardware sample average select\n");
 	}
+
+	cfg_data &= ~siklu_num_samples_mask;
+	cfg_data |= siklu_num_samples;
 
 	writel(cfg_data, info->regs + VF610_REG_ADC_CFG);
 	writel(gc_data, info->regs + VF610_REG_ADC_GC);
@@ -705,6 +729,53 @@ static int vf610_read_raw(struct iio_dev *indio_dev,
 	return -EINVAL;
 }
 
+
+
+
+typedef struct
+{
+	struct iio_dev *indio_dev;
+	// struct iio_chan_spec const *chan[ARRAY_SIZE(vf610_adc_iio_channels)]; // siklu uses 8 chan
+} siklu_adc_stored_data_S;
+
+static siklu_adc_stored_data_S siklu_adc_stored_data = {
+		.indio_dev = NULL,
+};
+
+
+int siklu_adc_read_chan(int chan, u32 *result)
+{
+	int rc;
+	struct iio_dev *indio_dev;
+	struct iio_chan_spec const *iio_chan;
+	int val = 0, val2 = 0;
+	long mask = IIO_CHAN_INFO_RAW;
+
+	*result = (u32)-1;
+	if (siklu_adc_stored_data.indio_dev == NULL) {
+		printk( "%s()   Error on line %d\n", __func__, __LINE__);
+		return -1;
+	}
+
+	if (siklu_adc_stored_data.indio_dev->channels == NULL) {
+		printk( "%s()   Error on line %d\n", __func__, __LINE__);
+		return -1;
+	}
+
+	indio_dev = siklu_adc_stored_data.indio_dev;
+	iio_chan = &vf610_adc_iio_channels[chan];
+	rc = vf610_read_raw(indio_dev, iio_chan, &val, &val2, mask);
+	*result = val;
+
+	// printk( "%s()   ret %d,  val %d, val2 %d\n", __func__, rc, val, val2);
+
+	return 0;
+}
+
+EXPORT_SYMBOL( siklu_adc_read_chan );
+
+
+
 static int vf610_write_raw(struct iio_dev *indio_dev,
 			struct iio_chan_spec const *chan,
 			int val,
@@ -819,6 +890,7 @@ static int vf610_adc_probe(struct platform_device *pdev)
 	struct resource *mem;
 	int irq;
 	int ret;
+	u32 channels;
 
 	indio_dev = devm_iio_device_alloc(&pdev->dev, sizeof(struct vf610_adc));
 	if (!indio_dev) {
@@ -877,13 +949,18 @@ static int vf610_adc_probe(struct platform_device *pdev)
 
 	init_completion(&info->completion);
 
+	ret  = of_property_read_u32(pdev->dev.of_node,
+					"num-channels", &channels);
+	if (ret)
+		channels = ARRAY_SIZE(vf610_adc_iio_channels);
+
 	indio_dev->name = dev_name(&pdev->dev);
 	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->dev.of_node = pdev->dev.of_node;
 	indio_dev->info = &vf610_adc_iio_info;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = vf610_adc_iio_channels;
-	indio_dev->num_channels = ARRAY_SIZE(vf610_adc_iio_channels);
+	indio_dev->num_channels = (int)channels;
 
 	ret = clk_prepare_enable(info->clk);
 	if (ret) {
@@ -907,6 +984,8 @@ static int vf610_adc_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Couldn't register the device.\n");
 		goto error_adc_buffer_init;
 	}
+
+	siklu_adc_stored_data.indio_dev = indio_dev;
 
 	return 0;
 

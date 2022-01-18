@@ -54,6 +54,26 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
+# include <linux/pm_runtime.h>
+// siklu addition for threads
+# include <linux/module.h>
+# include <linux/kernel.h>
+# include <linux/kthread.h>  	// for threads
+# include <linux/time.h>   		// for using jiffies
+# include <linux/timer.h>
+#endif // CONFIG_I2C_SLAVE
+
+
+// #define SIKLU_DEBUG_I2C_SLAVE   // used for siklu debug only
+
+#ifdef SIKLU_DEBUG_I2C_SLAVE  
+# define debugp printk
+#else
+# define debugp(fmt, a...)
+#endif
+
+
 /* This will be the driver name the kernel reports */
 #define DRIVER_NAME "imx-i2c"
 
@@ -196,6 +216,10 @@ struct imx_i2c_struct {
 	struct clk		*clk;
 	void __iomem		*base;
 	wait_queue_head_t	queue;
+
+	wait_queue_head_t	slave_mode_queue;  	// Siklu addition
+	struct i2c_client *slave;				// Siklu
+
 	unsigned long		i2csr;
 	unsigned int		disable_delay;
 	int			stopped;
@@ -279,6 +303,82 @@ static inline unsigned char imx_i2c_read_reg(struct imx_i2c_struct *i2c_imx,
 {
 	return readb(i2c_imx->base + (reg << i2c_imx->hwdata->regshift));
 }
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
+// =========== siklu start
+typedef enum
+{
+	i2c_slave_state_no_active,
+	i2c_slave_state_slave_addr_received,
+	i2c_slave_state_slave_addr_data_byte_received,
+	i2c_slave_state_slave_stop_received,
+} i2c_slave_state_E;
+
+static struct task_struct *i2c_slave_thread = NULL;
+
+i2c_slave_state_E i2c_imx_slave_read(struct imx_i2c_struct *i2c_imx, i2c_slave_state_E current_state)
+{
+	i2c_slave_state_E new_state = current_state;
+	return new_state;
+}
+
+/*
+ *
+ */
+static int i2c_slave_mode_thread(void* data)
+{
+
+	struct imx_i2c_struct *i2c_imx = (struct imx_i2c_struct *) data;
+
+	do {
+		// u8 data;
+		wait_event_timeout(i2c_imx->slave_mode_queue, i2c_imx->i2csr & I2SR_IIF, HZ * 5);
+
+		if (unlikely(!(i2c_imx->i2csr & I2SR_IIF))) {
+			// debugp("######>> %s()   line %d\n", __func__, __LINE__);
+			continue;
+		}
+
+#if 0 // edikk do not use thread, it's too slow.  fill data in IRQ
+		{
+			i2c_slave_state_E state = i2c_slave_state_no_active;
+			i2c_imx->i2csr = 0;
+
+			// read from i2dr  release SCL
+			data = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2DR);
+			debugp( "  %s() Called, received slave event, data 0x%x\n", __func__, data);
+			state = i2c_imx_slave_read(i2c_imx, state);
+		}
+#endif // 0
+
+	} while (1);
+	return 0;
+}
+
+/*
+ *
+ */
+static int i2c_slave_thread_init(struct imx_i2c_struct *i2c_imx) {
+
+
+	return 0;// siklu - disavble thread. In any case our SW doesn't use it
+
+
+	if (i2c_slave_thread == NULL) {
+		char our_thread[] = "i2c_slave";
+
+		i2c_slave_thread = kthread_create(i2c_slave_mode_thread, i2c_imx,
+				our_thread);
+		if ((i2c_slave_thread)) {
+			wake_up_process(i2c_slave_thread);
+		}
+	}
+	return 0;
+}
+
+#endif // (CONFIG_I2C_SLAVE)
+
+// ===========  siklu end
+
 
 /* Functions for DMA support */
 static void i2c_imx_dma_request(struct imx_i2c_struct *i2c_imx,
@@ -415,16 +515,19 @@ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy)
 {
 	unsigned long orig_jiffies = jiffies;
 	unsigned int temp;
+	u32 i = 0;
 
 	dev_dbg(&i2c_imx->adapter.dev, "<%s>\n", __func__);
-
+	debugp("######>> %s()   line %d\n", __func__, __LINE__);
 	while (1) {
+		i++;
 		temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2SR);
 
 		/* check for arbitration lost */
 		if (temp & I2SR_IAL) {
 			temp &= ~I2SR_IAL;
 			imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2SR);
+			printk("%s()  ERROR line %d\n", __func__, __LINE__);
 			return -EAGAIN;
 		}
 
@@ -438,14 +541,25 @@ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy)
 			return -ETIMEDOUT;
 		}
 		schedule();
-	}
 
+		if (i >= 100000) {
+			printk("%s()  Too busy... EXIT\n", __func__);
+			break;
+		}
+
+	}
+	debugp("######>> %s()   line %d\n", __func__, __LINE__);
 	return 0;
 }
 
 static int i2c_imx_trx_complete(struct imx_i2c_struct *i2c_imx)
 {
 	wait_event_timeout(i2c_imx->queue, i2c_imx->i2csr & I2SR_IIF, HZ / 10);
+
+
+	//debugp("%s()  Called, line %d, i2c_imx->i2csr 0x%lx, Number %d\n",
+	//		__func__, __LINE__, i2c_imx->i2csr, i2c_imx->adapter.nr);
+	debugp("######>> %s()   line %d\n", __func__, __LINE__);
 
 	if (unlikely(!(i2c_imx->i2csr & I2SR_IIF))) {
 		dev_dbg(&i2c_imx->adapter.dev, "<%s> Timeout\n", __func__);
@@ -514,6 +628,7 @@ static int i2c_imx_start(struct imx_i2c_struct *i2c_imx)
 {
 	unsigned int temp = 0;
 	int result;
+	debugp("######>> %s()   line %d, nr %d\n", __func__, __LINE__, i2c_imx->adapter.nr);
 
 	dev_dbg(&i2c_imx->adapter.dev, "<%s>\n", __func__);
 
@@ -553,6 +668,7 @@ static void i2c_imx_stop(struct imx_i2c_struct *i2c_imx)
 		temp &= ~(I2CR_MSTA | I2CR_MTX);
 		if (i2c_imx->dma)
 			temp &= ~I2CR_DMAEN;
+
 		imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
 	}
 	if (is_imx1_i2c(i2c_imx)) {
@@ -568,28 +684,96 @@ static void i2c_imx_stop(struct imx_i2c_struct *i2c_imx)
 		i2c_imx->stopped = 1;
 	}
 
+
+
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
+	if (i2c_imx->adapter.nr == 0) // Siklu - bus 0 works in CPU only master mode
+	{
+		debugp("%s()    line %d\n", __func__, __LINE__); 
+		/* Disable I2C controller */
+		temp = i2c_imx->hwdata->i2cr_ien_opcode ^ I2CR_IEN,
+		imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
+		// clk_disable_unprepare(i2c_imx->clk); important! no need
+	}
+	else if (i2c_imx->adapter.nr == 1) {// Siklu - bus 1 works in CPU only slave mode
+		debugp("%s()    line %d\n", __func__, __LINE__); 
+		// do not disable controller, we continue work in slave mode
+		temp = i2c_imx->hwdata->i2cr_ien_opcode;
+		temp &= ~(I2CR_MSTA | I2CR_MTX);
+		temp |= (I2CR_IEN | I2CR_IIEN);
+		imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
+		// clk_disable_unprepare(i2c_imx->clk); important! no need
+	}
+#else // !CONFIG_I2C_SLAVE
 	/* Disable I2C controller */
 	temp = i2c_imx->hwdata->i2cr_ien_opcode ^ I2CR_IEN,
 	imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
+#endif 	// CONFIG_I2C_SLAVE
 }
+
+
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
+//static u8 slave_buff[0x10];
+//static u8 slave_buff_offs = 0;
+
+// siklu internal function for process received data
+int (*siklu_i2c_slave_event)(struct i2c_adapter* adapter, uint32_t i2sr_val, uint32_t data ) = NULL;
+EXPORT_SYMBOL( siklu_i2c_slave_event);
+/*
+ * executed in interrupt context
+ * received data should be copied to user if IBB bit is '0'!
+ */
+static void i2c_imx_isr_slave_event(struct imx_i2c_struct *i2c_imx, uint32_t i2sr_val)
+{
+	u8 val;
+	static int call_count = 0;
+
+	call_count++;
+	// i2c_imx->i2csr = 0;   TBD do we need clean here ???
+	// read from i2dr  release SCL
+	val = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2DR);
+
+	if (siklu_i2c_slave_event) {
+		siklu_i2c_slave_event(&i2c_imx->adapter,  i2sr_val, val);
+	}
+
+}
+
+#endif // (CONFIG_I2C_SLAVE)
+
 
 static irqreturn_t i2c_imx_isr(int irq, void *dev_id)
 {
 	struct imx_i2c_struct *i2c_imx = dev_id;
-	unsigned int temp;
+	u32 temp, iaas_event = 0, i2sr_val;
+	irqreturn_t ret = IRQ_NONE;
 
-	temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2SR);
+	debugp("######>> %s()   line %d, nr %d\n", __func__, __LINE__, i2c_imx->adapter.nr);
+	i2sr_val = temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2SR);
+	iaas_event = temp & I2SR_IAAS;
+	debugp("######>> IMX_I2C_I2SR - 0x%x\n", temp);
+
 	if (temp & I2SR_IIF) {
 		/* save status register */
 		i2c_imx->i2csr = temp;
 		temp &= ~I2SR_IIF;
 		temp |= (i2c_imx->hwdata->i2sr_clr_opcode & I2SR_IIF);
 		imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2SR);
-		wake_up(&i2c_imx->queue);
-		return IRQ_HANDLED;
-	}
 
-	return IRQ_NONE;
+		if (iaas_event) {
+#if  IS_ENABLED(CONFIG_I2C_SLAVE)
+			i2c_imx_isr_slave_event(i2c_imx, i2sr_val); //  edikk straight call
+			// ??? wake_up(&i2c_imx->slave_mode_queue); // takes at least 50msec ! therefore receive data in interrupt
+#endif
+		}
+		else {
+			wake_up(&i2c_imx->queue);
+		}
+
+		ret = IRQ_HANDLED;
+	}
+	debugp("######>> %s()   line %d, ret %d\n", __func__, __LINE__, ret);
+	return ret;
 }
 
 static int i2c_imx_dma_write(struct imx_i2c_struct *i2c_imx,
@@ -1033,13 +1217,93 @@ static int i2c_imx_init_recovery_info(struct imx_i2c_struct *i2c_imx,
 
 static u32 i2c_imx_func(struct i2c_adapter *adapter)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL
-		| I2C_FUNC_SMBUS_READ_BLOCK_DATA;
+#ifdef CONFIG_SIKLU_BOARD
+	u32 rc = 0;
+	if (adapter->nr == 0) {
+		rc = I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL | I2C_FUNC_SMBUS_READ_BLOCK_DATA;
+	}
+	else if (adapter->nr == 1) { // I2C2 works in slave read only mode
+		rc = I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL | I2C_FUNC_SLAVE;
+	}
+	return rc;
+#else
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL | I2C_FUNC_SMBUS_READ_BLOCK_DATA;
+#endif
+
 }
+
+#if  IS_ENABLED(CONFIG_I2C_SLAVE)
+// =======================   siklu start
+
+#define imx_i2c_priv_to_dev(p)		((p)->adapter.dev.parent)
+static struct imx_i2c_struct *i2c_imx_slave_stored = NULL;
+
+//
+static int imx_reg_slave(struct i2c_client *slave)
+{
+	u8 temp;
+	struct imx_i2c_struct *i2c_imx = i2c_get_adapdata(slave->adapter);
+
+	debugp("######>> %s()   line %d, nr %d\n", __func__, __LINE__, i2c_imx->adapter.nr);
+
+	if (i2c_imx->slave)
+		return -EBUSY;
+
+	if (slave->flags & I2C_CLIENT_TEN)
+		return -EAFNOSUPPORT;
+
+	// priv.
+	debugp("######>> %s() set slave address 0x%x\n", __func__, slave->addr);
+	imx_i2c_write_reg(slave->addr, i2c_imx, IMX_I2C_IADR);
+
+	pm_runtime_forbid(imx_i2c_priv_to_dev(i2c_imx));
+
+	i2c_imx->slave = slave;
+
+	// temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2CR);
+	temp = i2c_imx->hwdata->i2cr_ien_opcode;
+	temp &= ~(I2CR_MSTA | I2CR_MTX);
+	temp |= (I2CR_IEN | I2CR_IIEN);
+	imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
+
+	i2c_slave_thread_init(i2c_imx);
+	i2c_imx_slave_stored = i2c_imx;
+	debugp("######>> %s()   line %d\n", __func__, __LINE__);
+	{
+		// for this purpose requires set bit IIEN in I2Cx_I2CR register
+		uint32_t i2cr = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2CR);
+		i2cr |= 0x40;
+		imx_i2c_write_reg(i2cr, i2c_imx, IMX_I2C_I2CR);
+
+		printk("%s() Start I2C%d interface in slave mode\n", __func__,  i2c_imx->adapter.nr+1);
+	}
+	return 0;
+}
+
+static int imx_unreg_slave(struct i2c_client *slave)
+{
+	// struct imx_i2c_priv *priv = i2c_get_adapdata(slave->adapter);
+	struct imx_i2c_struct *priv = i2c_get_adapdata(slave->adapter);
+
+	WARN_ON(!priv->slave);
+
+	priv->slave = NULL;
+	pm_runtime_allow(imx_i2c_priv_to_dev(priv));
+	return 0;
+}
+
+//  =======================   siklu end
+#endif 
+
+
 
 static struct i2c_algorithm i2c_imx_algo = {
 	.master_xfer	= i2c_imx_xfer,
 	.functionality	= i2c_imx_func,
+#if  IS_ENABLED(CONFIG_I2C_SLAVE)
+	.reg_slave		= imx_reg_slave,
+	.unreg_slave	= imx_unreg_slave,
+#endif //
 };
 
 static int i2c_imx_probe(struct platform_device *pdev)
@@ -1052,6 +1316,8 @@ static int i2c_imx_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int irq, ret;
 	dma_addr_t phy_addr;
+
+	debugp("######>> %s()   line %d\n", __func__, __LINE__);
 
 	dev_dbg(&pdev->dev, "<%s>\n", __func__);
 
@@ -1099,9 +1365,10 @@ static int i2c_imx_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+
 	/* Request IRQ */
-	ret = devm_request_irq(&pdev->dev, irq, i2c_imx_isr, 0,
-				pdev->name, i2c_imx);
+	ret = devm_request_irq(&pdev->dev, irq, i2c_imx_isr,
+			       IRQF_NO_SUSPEND, pdev->name, i2c_imx);
 	if (ret) {
 		dev_err(&pdev->dev, "can't claim irq %d\n", irq);
 		goto clk_disable;
@@ -1109,6 +1376,9 @@ static int i2c_imx_probe(struct platform_device *pdev)
 
 	/* Init queue */
 	init_waitqueue_head(&i2c_imx->queue);
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
+	init_waitqueue_head(&i2c_imx->slave_mode_queue);  // Siklu
+#endif
 
 	/* Set up adapter data */
 	i2c_set_adapdata(&i2c_imx->adapter, i2c_imx);
@@ -1159,7 +1429,7 @@ static int i2c_imx_probe(struct platform_device *pdev)
 
 	/* Init DMA config if supported */
 	i2c_imx_dma_request(i2c_imx, phy_addr);
-
+	debugp("######>> %s()   line %d, name %s, nr %d\n", __func__, __LINE__, i2c_imx->adapter.name, i2c_imx->adapter.nr);
 	return 0;   /* Return OK */
 
 rpm_disable:
@@ -1209,6 +1479,7 @@ static int i2c_imx_runtime_suspend(struct device *dev)
 	struct imx_i2c_struct *i2c_imx = dev_get_drvdata(dev);
 
 	clk_disable_unprepare(i2c_imx->clk);
+	pinctrl_pm_select_sleep_state(dev);
 
 	return 0;
 }
@@ -1218,6 +1489,7 @@ static int i2c_imx_runtime_resume(struct device *dev)
 	struct imx_i2c_struct *i2c_imx = dev_get_drvdata(dev);
 	int ret;
 
+	pinctrl_pm_select_default_state(dev);
 	ret = clk_prepare_enable(i2c_imx->clk);
 	if (ret)
 		dev_err(dev, "can't enable I2C clock, ret=%d\n", ret);
@@ -1225,7 +1497,20 @@ static int i2c_imx_runtime_resume(struct device *dev)
 	return ret;
 }
 
+static int i2c_imx_suspend(struct device *dev)
+{
+	pinctrl_pm_select_sleep_state(dev);
+	return 0;
+}
+
+static int i2c_imx_resume(struct device *dev)
+{
+	pinctrl_pm_select_default_state(dev);
+	return 0;
+}
+
 static const struct dev_pm_ops i2c_imx_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(i2c_imx_suspend, i2c_imx_resume)
 	SET_RUNTIME_PM_OPS(i2c_imx_runtime_suspend,
 			   i2c_imx_runtime_resume, NULL)
 };
@@ -1247,6 +1532,7 @@ static struct platform_driver i2c_imx_driver = {
 
 static int __init i2c_adap_imx_init(void)
 {
+	debugp("######>> %s()   line %d\n", __func__, __LINE__);
 	return platform_driver_register(&i2c_imx_driver);
 }
 subsys_initcall(i2c_adap_imx_init);

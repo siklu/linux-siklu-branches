@@ -2,7 +2,7 @@
  * CAAM/SEC 4.x transport/backend driver
  * JobR backend functionality
  *
- * Copyright 2008-2012 Freescale Semiconductor, Inc.
+ * Copyright 2008-2015 Freescale Semiconductor, Inc.
  */
 
 #include <linux/of_irq.h>
@@ -291,8 +291,7 @@ EXPORT_SYMBOL(caam_jr_free);
  * caam_jr_enqueue() - Enqueue a job descriptor head. Returns 0 if OK,
  * -EBUSY if the queue is full, -EIO if it cannot map the caller's
  * descriptor.
- * @dev:  device of the job ring to be used. This device should have
- *        been assigned prior by caam_jr_register().
+ * @dev:  device of the job ring to be used.
  * @desc: points to a job descriptor that execute our request. All
  *        descriptors (and all referenced data) must be in a DMAable
  *        region, and all data references must be physical addresses
@@ -501,6 +500,10 @@ static int caam_jr_probe(struct platform_device *pdev)
 
 	/* Identify the interrupt */
 	jrpriv->irq = irq_of_parse_and_map(nprop, 0);
+	if (jrpriv->irq <= 0) {
+		kfree(jrpriv);
+		return -EINVAL;
+	}
 
 	/* Now do the platform independent part */
 	error = caam_jr_init(jrdev); /* now turn on hardware */
@@ -508,7 +511,7 @@ static int caam_jr_probe(struct platform_device *pdev)
 		irq_dispose_mapping(jrpriv->irq);
 		iounmap(ctrl);
 		return error;
-	}
+    }
 
 	jrpriv->dev = jrdev;
 	spin_lock(&driver_data.jr_alloc_lock);
@@ -517,8 +520,38 @@ static int caam_jr_probe(struct platform_device *pdev)
 
 	atomic_set(&jrpriv->tfm_count, 0);
 
+	device_init_wakeup(&pdev->dev, 1);
+	device_set_wakeup_enable(&pdev->dev, false);
+
 	return 0;
 }
+
+#ifdef CONFIG_PM
+static int caam_jr_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct caam_drv_private_jr *jrpriv = platform_get_drvdata(pdev);
+
+	if (device_may_wakeup(&pdev->dev))
+		enable_irq_wake(jrpriv->irq);
+
+	return 0;
+}
+
+static int caam_jr_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct caam_drv_private_jr *jrpriv = platform_get_drvdata(pdev);
+
+	if (device_may_wakeup(&pdev->dev))
+		disable_irq_wake(jrpriv->irq);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(caam_jr_pm_ops, caam_jr_suspend,
+			 caam_jr_resume);
+#endif
 
 static struct of_device_id caam_jr_match[] = {
 	{
@@ -535,6 +568,9 @@ static struct platform_driver caam_jr_driver = {
 	.driver = {
 		.name = "caam_jr",
 		.of_match_table = caam_jr_match,
+#ifdef CONFIG_PM
+		.pm = &caam_jr_pm_ops,
+#endif
 	},
 	.probe       = caam_jr_probe,
 	.remove      = caam_jr_remove,

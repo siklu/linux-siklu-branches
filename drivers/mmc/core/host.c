@@ -230,6 +230,8 @@ int mmc_of_parse(struct mmc_host *host)
 	/* Parse Card Detection */
 	if (of_property_read_bool(np, "non-removable")) {
 		host->caps |= MMC_CAP_NONREMOVABLE;
+		if (of_property_read_bool(np, "cd-post"))
+			host->caps2 |= MMC_CAP2_CD_POST;
 	} else {
 		cd_cap_invert = of_property_read_bool(np, "cd-inverted");
 
@@ -301,6 +303,8 @@ int mmc_of_parse(struct mmc_host *host)
 	if (of_property_read_bool(np, "wakeup-source") ||
 	    of_property_read_bool(np, "enable-sdio-wakeup")) /* legacy */
 		host->pm_caps |= MMC_PM_WAKE_SDIO_IRQ;
+	if (of_get_property(np, "pm-ignore-notify", NULL))
+		host->pm_caps |= MMC_PM_IGNORE_PM_NOTIFY;
 	if (of_property_read_bool(np, "mmc-ddr-1_8v"))
 		host->caps |= MMC_CAP_1_8V_DDR;
 	if (of_property_read_bool(np, "mmc-ddr-1_2v"))
@@ -335,6 +339,8 @@ int mmc_of_parse(struct mmc_host *host)
 
 EXPORT_SYMBOL(mmc_of_parse);
 
+int mmc_max_reserved_idx(void);
+
 /**
  *	mmc_alloc_host - initialise the per-host structure.
  *	@extra: sizeof private data structure
@@ -346,6 +352,7 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 {
 	int err;
 	struct mmc_host *host;
+	int alias_id, min_idx, max_idx;
 
 	host = kzalloc(sizeof(struct mmc_host) + extra, GFP_KERNEL);
 	if (!host)
@@ -353,6 +360,7 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 
 	/* scanning will be enabled when we're ready */
 	host->rescan_disable = 1;
+	host->parent = dev;
 
 again:
 	if (!ida_pre_get(&mmc_host_ida, GFP_KERNEL)) {
@@ -361,7 +369,24 @@ again:
 	}
 
 	spin_lock(&mmc_host_lock);
-	err = ida_get_new(&mmc_host_ida, &host->index);
+
+	alias_id = mmc_get_reserved_index(host);
+	if (alias_id >= 0) {
+		min_idx = alias_id;
+		max_idx = alias_id + 1;
+	} else {
+		min_idx = mmc_first_nonreserved_index();
+		max_idx = 0;
+	}
+
+	err = ida_get_new_above(&mmc_host_ida, min_idx, &host->index);
+	if (!err) {
+		if (host->index > max_idx) {
+			ida_remove(&mmc_host_ida, host->index);
+			err = -ENOSPC;
+		}
+	}
+
 	spin_unlock(&mmc_host_lock);
 
 	if (err == -EAGAIN) {
@@ -373,7 +398,6 @@ again:
 
 	dev_set_name(&host->class_dev, "mmc%d", host->index);
 
-	host->parent = dev;
 	host->class_dev.parent = dev;
 	host->class_dev.class = &mmc_host_class;
 	device_initialize(&host->class_dev);
@@ -431,7 +455,8 @@ int mmc_add_host(struct mmc_host *host)
 #endif
 
 	mmc_start_host(host);
-	mmc_register_pm_notifier(host);
+	if (!(host->pm_caps& MMC_PM_IGNORE_PM_NOTIFY))
+		mmc_register_pm_notifier(host);
 
 	return 0;
 }
@@ -448,7 +473,8 @@ EXPORT_SYMBOL(mmc_add_host);
  */
 void mmc_remove_host(struct mmc_host *host)
 {
-	mmc_unregister_pm_notifier(host);
+	if (!(host->pm_caps& MMC_PM_IGNORE_PM_NOTIFY))
+		mmc_unregister_pm_notifier(host);
 	mmc_stop_host(host);
 
 #ifdef CONFIG_DEBUG_FS
