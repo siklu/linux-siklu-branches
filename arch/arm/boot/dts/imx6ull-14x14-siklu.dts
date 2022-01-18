@@ -4,9 +4,9 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * Edward K. 
+ * Edward K.
  * 14.11.2017:		The file adapted to Siklu PCB-19x HW boards   ( siklu )
- * 
+ *
  */
 
 /dts-v1/;
@@ -48,7 +48,7 @@
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		
+
 		reg_usb_otg2_vbus: regulator@3 {
 			compatible = "regulator-fixed";
 			reg = <3>;
@@ -65,7 +65,7 @@
 			regulator-max-microvolt = <3300000>;
 		};
 	};
-	
+
 	onewire {
 		compatible = "w1-gpio";
 		pinctrl-names = "default";
@@ -189,9 +189,9 @@
 	reg-names = "gpmi-nand", "bch";
 };
 
-&ecspi1 { /* siklu RFIC70 and RFIC80 */ 
+&ecspi1 { /* siklu RFIC70 and RFIC80 */
 		status = "okay";
-		fsl,spi-num-chipselects = <4>; 
+		fsl,spi-num-chipselects = <4>;
 		cs-gpios = <&gpio4 26 GPIO_ACTIVE_LOW
 		&gpio3 10 GPIO_ACTIVE_LOW
 		&gpio3 11 GPIO_ACTIVE_LOW
@@ -207,13 +207,13 @@
 			mode = <0>;
 		};
 };
- 
+
 
 &ecspi2 {	/*   siklu CPLD */
 	status = "okay";
 	fsl,spi-num-chipselects = <2>;
 	cs-gpios = <
-		&gpio4 22 GPIO_ACTIVE_LOW 
+		&gpio4 22 GPIO_ACTIVE_LOW
 		&gpio3 2 GPIO_ACTIVE_LOW
 	>;
 	pinctrl-names = "default";
@@ -230,8 +230,8 @@
 		mode = <0>;
 	};
 };
-	
-	
+
+
 &ecspi3 {   /* siklu SPI-NOR */
 	status = "okay";
 	spi-max-frequency = <1000000>;
@@ -241,7 +241,7 @@
 	pinctrl-0 = <&pinctrl_ecspi3_1 &pinctrl_ecspi3_cs_1>;
 	flash: m25p80@0 {
 			compatible = "st,mx25l1606e", "spi-flash";
-			reg = <0>; 
+			reg = <0>;
 			spi-max-frequency = <1000000>;
 			mode = <0>;
 			#address-cells = <1>;
@@ -252,9 +252,9 @@
 				label = "u-boot";
 				read-only;
 			};
-			partition@1F0000 { 
+			partition@1F0000 {
 				reg = <0x1F0000 0x10000>;
-				label = "seeprom"; 
+				label = "seeprom";
 			};
 		};
 };
@@ -265,7 +265,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
 	status = "okay";
-	
+
 	rtc: pcf8523@68 {
 		compatible = "nxp,pcf8523";
 		reg = <0x68>;
@@ -300,10 +300,10 @@
 	pinctrl_switch: switchgrp {
 		fsl,pins = <
 /*
-			MX6UL_PAD_GPIO1_IO07__ENET2_MDC         0x1b0b0 
+			MX6UL_PAD_GPIO1_IO07__ENET2_MDC         0x1b0b0
 			MX6UL_PAD_GPIO1_IO06__ENET2_MDIO        0x1b0b0
 */
-			MX6UL_PAD_GPIO1_IO07__ENET1_MDC         0x1b0b0 
+			MX6UL_PAD_GPIO1_IO07__ENET1_MDC         0x1b0b0
 			MX6UL_PAD_GPIO1_IO06__ENET1_MDIO        0x1b0b0
 		>;
 	};
@@ -327,8 +327,8 @@
 			MX6UL_PAD_CSI_MCLK__I2C1_SDA  0x4001b8b0
 		>;
 	};
-	
-	
+
+
 	pinctrl_gpmi_nand_1: gpmi-nand-1 {
 		fsl,pins = <
 			MX6UL_PAD_NAND_RE_B__RAWNAND_RE_B       0x10b0
@@ -350,13 +350,13 @@
 			MX6UL_PAD_NAND_DQS__RAWNAND_DQS         0x10b0
 		>;
 	};
-	
+
 	pinctrl_i2c2: i2c2grp {
 		fsl,pins = <
 			MX6UL_PAD_CSI_HSYNC__I2C2_SCL  0x4001b8b0
 			MX6UL_PAD_CSI_VSYNC__I2C2_SDA  0x4001b8b0
 		>;
-	};	
+	};
 
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
@@ -393,7 +393,7 @@
 		fsl,pins = <
 			/* IOMUXC_SW_MUX_CTL_PAD_UART2_TX_DATA pad */
 			MX6UL_PAD_UART2_TX_DATA__GPIO1_IO20  0x10b0
-			
+
 		>;
 	};
 	pinctrl_ecspi3_1: ecspi3grp-1 {
@@ -428,28 +428,28 @@
 			MX6UL_PAD_UART3_TX_DATA__UART2_DTE_RTS	0x1b0b1
 		>;
 	};
-	
+
 	pinctrl_uart3: uart3grp {
 		fsl,pins = <
 			MX6UL_PAD_UART3_TX_DATA__UART3_DCE_TX 0x1b0b1
 			MX6UL_PAD_UART3_RX_DATA__UART3_DCE_RX 0x1b0b1
 		>;
 	};
-	
+
 	pinctrl_uart4: uart4grp {
 		fsl,pins = <
 			MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX 0x1b0b1
 			MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX 0x1b0b1
 		>;
 	};
-	
+
 
 	pinctrl_usb_otg1_id: usbotg1idgrp {
 		fsl,pins = <
 			MX6UL_PAD_GPIO1_IO00__ANATOP_OTG1_ID	0x17059
 		>;
 	};
-	
+
 	pinctrl_adc1: adc1grp {
 		fsl,pins = <
 			MX6UL_PAD_GPIO1_IO00__GPIO1_IO00        0xb0
@@ -465,28 +465,28 @@
 	};
 	pinctrl_w1_0:  w1_0grp { /* used for access 1-wire EEPROM */
 		fsl,pins = <
-			MX6UL_PAD_LCD_DATA14__GPIO3_IO19        0xb0 
-			MX6UL_PAD_LCD_DATA15__GPIO3_IO20        0xb0 
-		>;	
+			MX6UL_PAD_LCD_DATA14__GPIO3_IO19        0xb0
+			MX6UL_PAD_LCD_DATA15__GPIO3_IO20        0xb0
+		>;
 	};
-	
+
 };
 
 &uart1 { /* serial debug interface */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1>; 
+	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
 };
 
 &uart3 {  /* broadcom modem */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3>; 
+	pinctrl-0 = <&pinctrl_uart3>;
 	status = "okay";
 };
 
 &uart4 { /* k60b interface */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart4>; 
+	pinctrl-0 = <&pinctrl_uart4>;
 	status = "okay";
 };
 
@@ -500,7 +500,7 @@
 &usbotg2 {
 	/*
 
-	disable-over-current; 
+	disable-over-current;
 	tpl-support;
 	pinctrl-names = "default";
 	dr_mode = "otg";
@@ -509,8 +509,8 @@
 	adp-disable;
 	*/
 	pinctrl-names = "default";
-	vbus-supply = <&reg_usb_otg2_vbus>; 
-	dr_mode = "host"; 	
+	vbus-supply = <&reg_usb_otg2_vbus>;
+	dr_mode = "host";
 	disable-over-current;
 	status = "okay";
 };
