@@ -70,6 +70,9 @@
 
 #include "fec.h"
 
+
+extern bool is_board_siklu(void); // used for distinct in run-time Siklu board
+
 static void set_multicast_list(struct net_device *ndev);
 static void fec_enet_itr_coal_init(struct net_device *ndev);
 
@@ -184,7 +187,7 @@ static const struct of_device_id fec_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, fec_dt_ids);
 
-static unsigned char macaddr[ETH_ALEN];
+static unsigned char macaddr[ETH_ALEN] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 }; // this value for test only!
 module_param_array(macaddr, byte, NULL, 0);
 MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 
@@ -1934,6 +1937,215 @@ static void fec_enet_phy_reset_after_clk_enable(struct net_device *ndev)
 	}
 }
 
+// used for both read and write
+#define FEC_MII_DATA_OP_SHIFT	28	/* MII PHY operation code bits */
+#define	CLAUSE45_OP_ADDR		(0 << FEC_MII_DATA_OP_SHIFT)
+#define CLAUSE45_OP_WRITE		(1 << FEC_MII_DATA_OP_SHIFT)
+#define	CLAUSE45_OP_READ		(3 << FEC_MII_DATA_OP_SHIFT)
+#define CLAUSE45_OP_READ_ADDR	(2 << FEC_MII_DATA_OP_SHIFT)
+
+
+static int fec_enet_mdio_op_clause45(struct mii_bus *bus, u32 op, int phy_addr, int dev_addr, u16* addr_data)
+{
+	struct fec_enet_private *fep = bus->priv;
+	struct device *dev = &fep->pdev->dev;
+	volatile unsigned long time_left;
+	volatile int ret = 0;
+	volatile u16 data;
+	volatile u32 temp;
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0)
+		return ret;
+
+	data = *addr_data;
+
+
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	temp =  op | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) | FEC_MMFR_TA | FEC_MMFR_DATA(data);
+	writel(temp, fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO read timeout\n");
+		printk("%s()  ERROR line %d\n",__func__, __LINE__);
+		ret = -ETIMEDOUT;
+		goto out;
+	}
+	if (op == CLAUSE45_OP_READ) {
+		temp = readl(fep->hwp + FEC_MII_DATA);
+		ret = FEC_MMFR_DATA(temp);
+		*addr_data = ret;
+	}
+	ret = 0;
+out:
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
+	return ret;
+}
+
+/*
+ * clause45 op
+ */
+static int fec_enet_mdio_read45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr)
+{
+#if 1
+	int ret = 0;
+	u16 addr_data;
+
+	addr_data = reg_addr & 0xFFFF;
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_ADDR , phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+	addr_data = 0; // preset but not need
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_READ , phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+	ret = addr_data;
+	return ret;
+
+#else
+	struct fec_enet_private *fep = bus->priv;
+	struct device *dev = &fep->pdev->dev;
+	unsigned long time_left;
+	int ret = 0;
+	u32 temp;
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0)
+		return ret;
+
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	/* Stage #1 - write address */
+	temp =  CLAUSE45_OP_ADDR | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+			FEC_MMFR_TA | FEC_MMFR_DATA(reg_addr);
+	writel( temp, fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO read timeout\n");
+		ret = -ETIMEDOUT;
+		goto out;
+	}
+
+	// stage #2 Read
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	temp = CLAUSE45_OP_READ | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+			FEC_MMFR_TA | FEC_MMFR_DATA(0xFFFF);
+
+	writel( temp, fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO read timeout\n");
+		ret = -ETIMEDOUT;
+		goto out;
+	}
+
+	ret = FEC_MMFR_DATA(readl(fep->hwp + FEC_MII_DATA));
+
+out:
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
+	return ret;
+#endif
+}
+/*
+ * clause45 op
+ */
+static 	int fec_enet_mdio_write45(struct mii_bus *bus, int phy_addr, int dev_addr, int reg_addr, u16 val)
+{
+#if 1
+	int ret = 0;
+	u16 addr_data;
+
+	addr_data = reg_addr & 0xFFFF;
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_ADDR , phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+	addr_data = val; //
+	ret = fec_enet_mdio_op_clause45(bus, CLAUSE45_OP_WRITE, phy_addr, dev_addr, &addr_data);
+	if (ret != 0) {
+		printk(" Error on line %d\n", __LINE__);
+		return ret;
+	}
+	ret = 0;
+	return ret;
+
+#else
+
+	struct fec_enet_private *fep = bus->priv;
+	struct device *dev = &fep->pdev->dev;
+	unsigned long time_left;
+	int ret;
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0)
+		return ret;
+	else
+		ret = 0;
+
+	fep->mii_timeout = 0;
+	reinit_completion(&fep->mdio_done);
+
+	/* start a write op - stage#1 write access register */
+	writel( CLAUSE45_OP_ADDR | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+		FEC_MMFR_TA | FEC_MMFR_DATA(reg_addr), fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO write timeout\n");
+		ret  = -ETIMEDOUT;
+	}
+
+	/* start a write op - stage#2 write reg value */
+	writel( CLAUSE45_OP_WRITE | FEC_MMFR_PA(phy_addr) | FEC_MMFR_RA(dev_addr) |
+		FEC_MMFR_TA | FEC_MMFR_DATA(val), fep->hwp + FEC_MII_DATA);
+
+	/* wait for end of transfer */
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		fep->mii_timeout = 1;
+		netdev_err(fep->netdev, "MDIO write timeout\n");
+		ret  = -ETIMEDOUT;
+	}
+
+
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+	return 0;
+#endif
+}
+
+
+
 static int fec_enet_clk_enable(struct net_device *ndev, bool enable)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
@@ -2053,6 +2265,16 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	return 0;
 }
 
+#ifdef CONFIG_SIKLU_BOARD
+static struct mii_bus *fec0_mii_bus4siklu = NULL;
+
+struct mii_bus *siklu_get_mii(void)
+{
+	return fec0_mii_bus4siklu;
+}
+EXPORT_SYMBOL(siklu_get_mii);
+#endif
+
 static int fec_enet_mii_init(struct platform_device *pdev)
 {
 	static struct mii_bus *fec0_mii_bus;
@@ -2146,6 +2368,8 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	 */
 	writel(0, fep->hwp + FEC_MII_DATA);
 
+	// printk("%s()  fep->phy_speed 0x%x, line %d\n", __func__, fep->phy_speed, __LINE__); 
+
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 
 	/* Clear any pending transaction complete indication */
@@ -2160,6 +2384,10 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	fep->mii_bus->name = "fec_enet_mii_bus";
 	fep->mii_bus->read = fec_enet_mdio_read;
 	fep->mii_bus->write = fec_enet_mdio_write;
+
+	fep->mii_bus->read45 = fec_enet_mdio_read45;
+	fep->mii_bus->write45 = fec_enet_mdio_write45;
+
 	snprintf(fep->mii_bus->id, MII_BUS_ID_SIZE, "%s-%x",
 		pdev->name, fep->dev_id + 1);
 	fep->mii_bus->priv = fep;
@@ -2176,6 +2404,9 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO)
 		fec0_mii_bus = fep->mii_bus;
 
+#ifdef CONFIG_SIKLU_BOARD
+		fec0_mii_bus4siklu = fec0_mii_bus;
+#endif //
 	return 0;
 
 err_out_free_mdiobus:
@@ -2183,6 +2414,22 @@ err_out_free_mdiobus:
 err_out:
 	return err;
 }
+
+#ifdef CONFIG_SIKLU_BOARD
+int fec_enet_mii_speed_conf(struct mii_bus *bus, bool is_fast) // siklu
+{
+	int rc = 0;
+	struct fec_enet_private *fep = bus->priv;
+	if (is_fast) {
+		writel(0x4, fep->hwp + FEC_MII_SPEED); // set speed x4 over regular 2.5MHz
+	}
+	else  {
+		writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
+	}
+	return rc;
+}
+EXPORT_SYMBOL( fec_enet_mii_speed_conf );
+#endif // CONFIG_SIKLU_BOARD
 
 static void fec_enet_mii_remove(struct fec_enet_private *fep)
 {
@@ -3636,6 +3883,11 @@ fec_probe(struct platform_device *pdev)
 	fep->bufdesc_ex = fep->quirks & FEC_QUIRK_HAS_BUFDESC_EX;
 	fep->clk_ptp = devm_clk_get(&pdev->dev, "ptp");
 	if (IS_ERR(fep->clk_ptp)) {
+		fep->clk_ptp = NULL;
+		fep->bufdesc_ex = false;
+	}
+
+	if (is_board_siklu()) { // siklu board doesn't use PTP!
 		fep->clk_ptp = NULL;
 		fep->bufdesc_ex = false;
 	}
