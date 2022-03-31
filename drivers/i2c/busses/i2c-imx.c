@@ -207,6 +207,8 @@ struct imx_i2c_struct {
 	struct notifier_block	clk_change_nb;
 	void __iomem		*base;
 	wait_queue_head_t	queue;
+	wait_queue_head_t	slave_mode_queue;	// Siklu addition
+	struct i2c_client	*slave;			// Siklu
 	unsigned long		i2csr;
 	unsigned int		disable_delay;
 	int			stopped;
