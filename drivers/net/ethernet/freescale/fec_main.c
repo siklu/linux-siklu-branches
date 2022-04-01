@@ -2184,17 +2184,24 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 
 	err = of_mdiobus_register(fep->mii_bus, node);
 	of_node_put(node);
-	if (err)
+	if (err) {
+		printk("YBA %s:%s() ERROR: of_mdiobus_register failed\n",
+			__FILE__, __func__);
 		goto err_out_free_mdiobus;
+	}
 
 	mii_cnt++;
 
 	/* save fec0 mii_bus */
-	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO)
+	//yba if (fep->quirks & FEC_QUIRK_SINGLE_MDIO)
 		fec0_mii_bus = fep->mii_bus;
 
 #ifdef CONFIG_SIKLU_BOARD
 		fec0_mii_bus4siklu = fec0_mii_bus;
+		if (NULL == fec0_mii_bus4siklu)
+			printk("YBA %s:%s() Set fec0_mii_bus4siklu for phy_init_module() to NULL\n", __FILE__, __func__);
+		else
+			printk("YBA %s:%s() Set fec0_mii_bus4siklu for phy_init_module() non-NULL\n", __FILE__, __func__);
 #endif //
 	return 0;
 

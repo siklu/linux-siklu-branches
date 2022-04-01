@@ -15,7 +15,7 @@
 #include "imx6ull.dtsi"
 
 / {
-	model = "Freescale i.MX6 ULL 14x14 EVK Board";
+	model = "YBA 1 Freescale i.MX6 ULL 14x14 EVK Board";
 	compatible = "fsl,imx6ull-14x14-evk", "fsl,imx6ull";
 
 	chosen {
@@ -23,7 +23,10 @@
 	};
 
 	memory {
-		reg = <0x80000000 0x20000000>;
+		// reg = <0x80000000 0x20000000>;
+		reg = <
+			  0x80000000 0x10000000
+		>;
 	};
 
 	reserved-memory {
@@ -188,6 +191,15 @@
 	interrupt-names = "bch";
 	reg-names = "gpmi-nand", "bch";
 };
+
+// Works
+//&gpmi {
+//	pinctrl-names = "default";
+//	pinctrl-0 = <&pinctrl_gpmi_nand_1>;
+//	reg-names = "gpmi-nand", "bch";
+//	status = "okay";
+//};
+
 
 &ecspi1 { /* siklu RFIC70 and RFIC80 */
 		status = "okay";
