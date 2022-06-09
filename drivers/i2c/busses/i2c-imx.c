@@ -20,6 +20,8 @@
  *
  */
 
+// #define DEBUG
+
 #include <linux/acpi.h>
 #include <linux/clk.h>
 #include <linux/completion.h>
@@ -751,12 +753,14 @@ static void i2c_imx_isr_slave_event(struct imx_i2c_struct *i2c_imx, uint32_t i2s
 	u8 val;
 	static int call_count = 0;
 
+	// debugp("%s,%s: Entered", __FILE__, __func__);
 	call_count++;
 	// i2c_imx->i2csr = 0;   TBD do we need clean here ???
 	// read from i2dr  release SCL
 	val = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2DR);
 
 	if (siklu_i2c_slave_event) {
+		// debugp("%s,%s: Calling siklu_i2c_slave_event", __FILE__, __func__);
 		siklu_i2c_slave_event(&i2c_imx->adapter,  i2sr_val, val);
 	}
 
@@ -768,20 +772,35 @@ static void i2c_imx_isr_slave_event(struct imx_i2c_struct *i2c_imx, uint32_t i2s
 static irqreturn_t i2c_imx_isr(int irq, void *dev_id)
 {
 	struct imx_i2c_struct *i2c_imx = dev_id;
-	unsigned int temp;
+	u32 temp, iaas_event = 0, i2sr_val;
+	irqreturn_t ret = IRQ_NONE;
 
-	temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2SR);
+	debugp("######>> %s()   line %d, nr %d\n", __func__, __LINE__, i2c_imx->adapter.nr);
+	i2sr_val = temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2SR);
+	iaas_event = temp & I2SR_IAAS;
+	debugp("######>> IMX_I2C_I2SR - 0x%x\n", temp);
+
 	if (temp & I2SR_IIF) {
 		/* save status register */
 		i2c_imx->i2csr = temp;
 		temp &= ~I2SR_IIF;
 		temp |= (i2c_imx->hwdata->i2sr_clr_opcode & I2SR_IIF);
 		imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2SR);
-		wake_up(&i2c_imx->queue);
-		return IRQ_HANDLED;
-	}
 
-	return IRQ_NONE;
+		if (iaas_event) {
+#if  IS_ENABLED(CONFIG_I2C_SLAVE)
+			i2c_imx_isr_slave_event(i2c_imx, i2sr_val); //  edikk straight call
+			// ??? wake_up(&i2c_imx->slave_mode_queue); // takes at least 50msec ! therefore receive data in interrupt
+#endif
+		}
+		else {
+			wake_up(&i2c_imx->queue);
+		}
+
+		ret = IRQ_HANDLED;
+	}
+	debugp("######>> %s()   line %d, ret %d\n", __func__, __LINE__, ret);
+	return ret;
 }
 
 static int i2c_imx_dma_write(struct imx_i2c_struct *i2c_imx,
@@ -1092,8 +1111,10 @@ static int i2c_imx_xfer_common(struct i2c_adapter *adapter,
 		}
 	}
 
-	if (result)
+	if (result) {
+		debugp("%s,%s: i2c_imx_start failed", __FILE__, __func__);
 		goto fail0;
+	}
 
 	/* read/write data */
 	for (i = 0; i < num; i++) {
@@ -1107,8 +1128,10 @@ static int i2c_imx_xfer_common(struct i2c_adapter *adapter,
 			temp |= I2CR_RSTA;
 			imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
 			result = i2c_imx_bus_busy(i2c_imx, 1, atomic);
-			if (result)
+			if (result) {
+				debugp("%s,%s: i2c_imx_bus_busy failed", __FILE__, __func__);
 				goto fail0;
+			}
 		}
 		dev_dbg(&i2c_imx->adapter.dev,
 			"<%s> transfer message: %d\n", __func__, i);
@@ -1139,8 +1162,10 @@ static int i2c_imx_xfer_common(struct i2c_adapter *adapter,
 			else
 				result = i2c_imx_write(i2c_imx, &msgs[i], atomic);
 		}
-		if (result)
+		if (result) {
+			debugp("%s,%s: i2c_imx_read failed", __FILE__, __func__);
 			goto fail0;
+		}
 	}
 
 fail0:
@@ -1313,7 +1338,7 @@ static int imx_reg_slave(struct i2c_client *slave)
 		i2cr |= 0x40;
 		imx_i2c_write_reg(i2cr, i2c_imx, IMX_I2C_I2CR);
 
-		printk("%s() Start I2C%d interface in slave mode\n", __func__,  i2c_imx->adapter.nr+1);
+		debugp("%s() Start I2C%d interface in slave mode\n", __func__,  i2c_imx->adapter.nr+1);
 	}
 	return 0;
 }
