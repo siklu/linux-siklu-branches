@@ -3810,8 +3810,10 @@ static long rtl8152_check_firmware(struct r8152 *tp, struct rtl_fw *rtl_fw)
 	}
 
 	ret = rtl8152_fw_verify_checksum(tp, fw_hdr, fw->size);
-	if (ret)
+	if (ret) {
+		printk(KERN_ERR "YBA: checksum failed %s %d\n", __func__, __LINE__);
 		goto fail;
+	}
 
 	ret = -EFAULT;
 
@@ -3819,14 +3821,18 @@ static long rtl8152_check_firmware(struct r8152 *tp, struct rtl_fw *rtl_fw)
 		struct fw_block *block = (struct fw_block *)&fw->data[i];
 		u32 type;
 
-		if ((i + sizeof(*block)) > fw->size)
+		if ((i + sizeof(*block)) > fw->size) {
+			printk(KERN_ERR "YBA: size failed %s %d\n", __func__, __LINE__);
 			goto fail;
+		}
 
 		type = __le32_to_cpu(block->type);
 		switch (type) {
 		case RTL_FW_END:
-			if (__le32_to_cpu(block->length) != sizeof(*block))
+			if (__le32_to_cpu(block->length) != sizeof(*block)) {
+				printk(KERN_ERR "YBA: length failed %s %d\n", __func__, __LINE__);
 				goto fail;
+			}
 			goto fw_end;
 		case RTL_FW_PLA:
 			if (pla) {
@@ -4096,14 +4102,17 @@ static int rtl8152_request_firmware(struct r8152 *tp)
 	long rc;
 
 	if (rtl_fw->fw || !rtl_fw->fw_name) {
+		printk(KERN_ERR "YBA: request_firmware failed %s %d\n", __func__, __LINE__);
 		dev_info(&tp->intf->dev, "skip request firmware\n");
 		rc = 0;
 		goto result;
 	}
 
 	rc = request_firmware(&rtl_fw->fw, rtl_fw->fw_name, &tp->intf->dev);
-	if (rc < 0)
+	if (rc < 0) {
+		printk(KERN_ERR "YBA: request_firmware failed %s %d\n", __func__, __LINE__);
 		goto result;
+	}
 
 	rc = rtl8152_check_firmware(tp, rtl_fw);
 	if (rc < 0)
