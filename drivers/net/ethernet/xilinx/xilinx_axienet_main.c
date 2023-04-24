@@ -129,6 +129,8 @@ static struct axienet_option axienet_options[] = {
  */
 static inline u32 axienet_dma_in32(struct axienet_local *lp, off_t reg)
 {
+	return 0;  //shmulik
+
 	return ioread32(lp->dma_regs + reg);
 }
 
@@ -144,12 +146,16 @@ static inline u32 axienet_dma_in32(struct axienet_local *lp, off_t reg)
 static inline void axienet_dma_out32(struct axienet_local *lp,
 				     off_t reg, u32 value)
 {
+	return ;  //shmulik
+
 	iowrite32(value, lp->dma_regs + reg);
 }
 
 static void axienet_dma_out_addr(struct axienet_local *lp, off_t reg,
 				 dma_addr_t addr)
 {
+	return ;  //shmulik
+
 	axienet_dma_out32(lp, reg, lower_32_bits(addr));
 
 	if (lp->features & XAE_FEATURE_DMA_64BIT)
@@ -159,6 +165,8 @@ static void axienet_dma_out_addr(struct axienet_local *lp, off_t reg,
 static void desc_set_phys_addr(struct axienet_local *lp, dma_addr_t addr,
 			       struct axidma_bd *desc)
 {
+	return ;  //shmulik
+
 	desc->phys = lower_32_bits(addr);
 	if (lp->features & XAE_FEATURE_DMA_64BIT)
 		desc->phys_msb = upper_32_bits(addr);
@@ -167,6 +175,8 @@ static void desc_set_phys_addr(struct axienet_local *lp, dma_addr_t addr,
 static dma_addr_t desc_get_phys_addr(struct axienet_local *lp,
 				     struct axidma_bd *desc)
 {
+	return 0;  //shmulik
+
 	dma_addr_t ret = desc->phys;
 
 	if (lp->features & XAE_FEATURE_DMA_64BIT)
@@ -185,6 +195,8 @@ static dma_addr_t desc_get_phys_addr(struct axienet_local *lp,
  */
 static void axienet_dma_bd_release(struct net_device *ndev)
 {
+	return ;  //shmulik
+
 	int i;
 	struct axienet_local *lp = netdev_priv(ndev);
 
@@ -237,6 +249,8 @@ static void axienet_dma_bd_release(struct net_device *ndev)
  */
 static int axienet_dma_bd_init(struct net_device *ndev)
 {
+	return 0;  //shmulik
+
 	u32 cr;
 	int i;
 	struct sk_buff *skb;
@@ -357,6 +371,8 @@ out:
 static void axienet_set_mac_address(struct net_device *ndev,
 				    const void *address)
 {
+	return ;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	if (address)
@@ -390,6 +406,8 @@ static void axienet_set_mac_address(struct net_device *ndev,
  */
 static int netdev_set_mac_address(struct net_device *ndev, void *p)
 {
+	return 0;  //shmulik
+
 	struct sockaddr *addr = p;
 	axienet_set_mac_address(ndev, addr->sa_data);
 	return 0;
@@ -408,6 +426,8 @@ static int netdev_set_mac_address(struct net_device *ndev, void *p)
  */
 static void axienet_set_multicast_list(struct net_device *ndev)
 {
+	return ;  //shmulik
+
 	int i;
 	u32 reg, af0reg, af1reg;
 	struct axienet_local *lp = netdev_priv(ndev);
@@ -479,6 +499,8 @@ static void axienet_set_multicast_list(struct net_device *ndev)
  */
 static void axienet_setoptions(struct net_device *ndev, u32 options)
 {
+	return ;  //shmulik
+
 	int reg;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct axienet_option *tp = &axienet_options[0];
@@ -496,6 +518,8 @@ static void axienet_setoptions(struct net_device *ndev, u32 options)
 
 static int __axienet_device_reset(struct axienet_local *lp)
 {
+	return 0;  //shmulik
+
 	u32 timeout;
 
 	/* Reset Axi DMA. This would reset Axi Ethernet core as well. The reset
@@ -534,6 +558,8 @@ static int __axienet_device_reset(struct axienet_local *lp)
  */
 static int axienet_device_reset(struct net_device *ndev)
 {
+	return 0;  //shmulik
+
 	u32 axienet_status;
 	struct axienet_local *lp = netdev_priv(ndev);
 	int ret;
@@ -603,6 +629,8 @@ static int axienet_device_reset(struct net_device *ndev)
 static int axienet_free_tx_chain(struct net_device *ndev, u32 first_bd,
 				 int nr_bds, u32 *sizep)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct axidma_bd *cur_p;
 	int max_bds = nr_bds;
@@ -659,6 +687,8 @@ static int axienet_free_tx_chain(struct net_device *ndev, u32 first_bd,
  */
 static void axienet_start_xmit_done(struct net_device *ndev)
 {
+	return ;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 	u32 packets = 0;
 	u32 size = 0;
@@ -694,6 +724,8 @@ static void axienet_start_xmit_done(struct net_device *ndev)
 static inline int axienet_check_tx_bd_space(struct axienet_local *lp,
 					    int num_frag)
 {
+	return 0;  //shmulik
+
 	struct axidma_bd *cur_p;
 	cur_p = &lp->tx_bd_v[(lp->tx_bd_tail + num_frag) % lp->tx_bd_num];
 	if (cur_p->status & XAXIDMA_BD_STS_ALL_MASK)
@@ -717,6 +749,8 @@ static inline int axienet_check_tx_bd_space(struct axienet_local *lp,
 static netdev_tx_t
 axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
+	return 0;  //shmulik
+
 	u32 ii;
 	u32 num_frag;
 	u32 csum_start_off;
@@ -818,6 +852,8 @@ axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
  */
 static void axienet_recv(struct net_device *ndev)
 {
+	return ;  //shmulik
+
 	u32 length;
 	u32 csumstatus;
 	u32 size = 0;
@@ -910,6 +946,8 @@ static void axienet_recv(struct net_device *ndev)
  */
 static irqreturn_t axienet_tx_irq(int irq, void *_ndev)
 {
+	return 0;  //shmulik
+
 	u32 cr;
 	unsigned int status;
 	struct net_device *ndev = _ndev;
@@ -960,6 +998,8 @@ out:
  */
 static irqreturn_t axienet_rx_irq(int irq, void *_ndev)
 {
+	return 0;  //shmulik
+
 	u32 cr;
 	unsigned int status;
 	struct net_device *ndev = _ndev;
@@ -1009,6 +1049,8 @@ out:
  */
 static irqreturn_t axienet_eth_irq(int irq, void *_ndev)
 {
+	return 0;  //shmulik
+
 	struct net_device *ndev = _ndev;
 	struct axienet_local *lp = netdev_priv(ndev);
 	unsigned int pending;
@@ -1044,6 +1086,8 @@ static void axienet_dma_err_handler(struct work_struct *work);
  */
 static int axienet_open(struct net_device *ndev)
 {
+	return 0;  //shmulik
+
 	int ret;
 	struct axienet_local *lp = netdev_priv(ndev);
 
@@ -1119,6 +1163,8 @@ err_tx_irq:
  */
 static int axienet_stop(struct net_device *ndev)
 {
+	return 0;  //shmulik
+
 	u32 cr, sr;
 	int count;
 	struct axienet_local *lp = netdev_priv(ndev);
@@ -1185,6 +1231,8 @@ static int axienet_stop(struct net_device *ndev)
  */
 static int axienet_change_mtu(struct net_device *ndev, int new_mtu)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	if (netif_running(ndev))
@@ -1221,6 +1269,8 @@ static void axienet_poll_controller(struct net_device *ndev)
 
 static int axienet_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(dev);
 
 	if (!netif_running(dev))
@@ -1286,6 +1336,8 @@ static int axienet_ethtools_get_regs_len(struct net_device *ndev)
 static void axienet_ethtools_get_regs(struct net_device *ndev,
 				      struct ethtool_regs *regs, void *ret)
 {
+	return ;  //shmulik
+
 	u32 *data = (u32 *) ret;
 	size_t len = sizeof(u32) * AXIENET_REGS_N;
 	struct axienet_local *lp = netdev_priv(ndev);
@@ -1335,6 +1387,8 @@ static void axienet_ethtools_get_regs(struct net_device *ndev,
 static void axienet_ethtools_get_ringparam(struct net_device *ndev,
 					   struct ethtool_ringparam *ering)
 {
+	return ;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	ering->rx_max_pending = RX_BD_NUM_MAX;
@@ -1350,6 +1404,8 @@ static void axienet_ethtools_get_ringparam(struct net_device *ndev,
 static int axienet_ethtools_set_ringparam(struct net_device *ndev,
 					  struct ethtool_ringparam *ering)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	if (ering->rx_pending > RX_BD_NUM_MAX ||
@@ -1379,6 +1435,8 @@ static void
 axienet_ethtools_get_pauseparam(struct net_device *ndev,
 				struct ethtool_pauseparam *epauseparm)
 {
+	return ;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	phylink_ethtool_get_pauseparam(lp->phylink, epauseparm);
@@ -1400,6 +1458,8 @@ static int
 axienet_ethtools_set_pauseparam(struct net_device *ndev,
 				struct ethtool_pauseparam *epauseparm)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	return phylink_ethtool_set_pauseparam(lp->phylink, epauseparm);
@@ -1419,6 +1479,8 @@ axienet_ethtools_set_pauseparam(struct net_device *ndev,
 static int axienet_ethtools_get_coalesce(struct net_device *ndev,
 					 struct ethtool_coalesce *ecoalesce)
 {
+	return 0;  //shmulik
+
 	u32 regval = 0;
 	struct axienet_local *lp = netdev_priv(ndev);
 	regval = axienet_dma_in32(lp, XAXIDMA_RX_CR_OFFSET);
@@ -1444,6 +1506,8 @@ static int axienet_ethtools_get_coalesce(struct net_device *ndev,
 static int axienet_ethtools_set_coalesce(struct net_device *ndev,
 					 struct ethtool_coalesce *ecoalesce)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	if (netif_running(ndev)) {
@@ -1464,6 +1528,8 @@ static int
 axienet_ethtools_get_link_ksettings(struct net_device *ndev,
 				    struct ethtool_link_ksettings *cmd)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	return phylink_ethtool_ksettings_get(lp->phylink, cmd);
@@ -1473,6 +1539,8 @@ static int
 axienet_ethtools_set_link_ksettings(struct net_device *ndev,
 				    const struct ethtool_link_ksettings *cmd)
 {
+	return 0;  //shmulik
+
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	return phylink_ethtool_ksettings_set(lp->phylink, cmd);
@@ -1498,6 +1566,8 @@ static void axienet_validate(struct phylink_config *config,
 			     unsigned long *supported,
 			     struct phylink_link_state *state)
 {
+	return ;  //shmulik
+
 	struct net_device *ndev = to_net_dev(config->dev);
 	struct axienet_local *lp = netdev_priv(ndev);
 	__ETHTOOL_DECLARE_LINK_MODE_MASK(mask) = { 0, };
@@ -1531,6 +1601,8 @@ static void axienet_validate(struct phylink_config *config,
 static void axienet_mac_pcs_get_state(struct phylink_config *config,
 				      struct phylink_link_state *state)
 {
+	return ;  //shmulik
+
 	struct net_device *ndev = to_net_dev(config->dev);
 	struct axienet_local *lp = netdev_priv(ndev);
 	u32 emmc_reg, fcc_reg;
@@ -1580,6 +1652,8 @@ static void axienet_mac_link_up(struct phylink_config *config,
 				int speed, int duplex,
 				bool tx_pause, bool rx_pause)
 {
+	return ;  //shmulik
+
 	struct net_device *ndev = to_net_dev(config->dev);
 	struct axienet_local *lp = netdev_priv(ndev);
 	u32 emmc_reg, fcc_reg;
@@ -1635,12 +1709,15 @@ static const struct phylink_mac_ops axienet_phylink_ops = {
  */
 static void axienet_dma_err_handler(struct work_struct *work)
 {
+	return ;  //shmulik
+
 	u32 axienet_status;
 	u32 cr, i;
 	struct axienet_local *lp = container_of(work, struct axienet_local,
 						dma_err_task);
 	struct net_device *ndev = lp->ndev;
 	struct axidma_bd *cur_p;
+
 
 	axienet_setoptions(ndev, lp->options &
 			   ~(XAE_OPTION_TXEN | XAE_OPTION_RXEN));
@@ -1775,13 +1852,15 @@ static void axienet_dma_err_handler(struct work_struct *work)
 static int axienet_probe(struct platform_device *pdev)
 {
 	int ret;
-	struct device_node *np;
 	struct axienet_local *lp;
 	struct net_device *ndev;
+#if 0 // shmulik
+	struct device_node *np;
 	const void *mac_addr;
 	struct resource *ethres;
 	int addr_width = 32;
 	u32 value;
+#endif  // shmulik
 
 	ndev = alloc_etherdev(sizeof(*lp));
 	if (!ndev)
@@ -1805,6 +1884,7 @@ static int axienet_probe(struct platform_device *pdev)
 	lp->options = XAE_OPTION_DEFAULTS;
 	lp->rx_bd_num = RX_BD_NUM_DEFAULT;
 	lp->tx_bd_num = TX_BD_NUM_DEFAULT;
+#if 0 // shmulik
 	/* Map device registers */
 	ethres = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	lp->regs = devm_ioremap_resource(&pdev->dev, ethres);
@@ -1999,6 +2079,7 @@ static int axienet_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev,
 				 "error registering MDIO bus: %d\n", ret);
 	}
+#endif  // shmulik
 
 	lp->phylink_config.dev = &ndev->dev;
 	lp->phylink_config.type = PHYLINK_NETDEV;
@@ -2009,12 +2090,14 @@ static int axienet_probe(struct platform_device *pdev)
 	if (IS_ERR(lp->phylink)) {
 		ret = PTR_ERR(lp->phylink);
 		dev_err(&pdev->dev, "phylink_create error (%i)\n", ret);
+		printk(KERN_ERR "============  axienet_probe  call phylink_create() Error =========== \n");  //shmulik
 		goto free_netdev;
 	}
 
 	ret = register_netdev(lp->ndev);
 	if (ret) {
 		dev_err(lp->dev, "register_netdev() error (%i)\n", ret);
+		printk(KERN_ERR "===========  axienet_probe  call register_netdev() Error =========== \n");  //shmulik
 		goto free_netdev;
 	}
 
