@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# siklu device configuration
+#
+
+config NET_VENDOR_SIKLU
+	bool "Siklu devices"
+	default y
+	help
+	  If you have a network (Ethernet) card belonging to this class, say Y.
+
+	  Note that the answer to this question doesn't directly affect the
+	  kernel: saying N will just cause the configurator to skip all
+	  the questions about Xilinx devices. If you say Y, you will be asked
+	  for your specific card in the following questions.
+
+if NET_VENDOR_SIKLU
+
+config SIKLU_EMAC
+	tristate "Siklu 10/100/1000 AXI Ethernet support"
+	select PHYLINK
+	help
+	  This driver is dummy MAC driver.
+	  
+endif # NET_VENDOR_SIKLU
+
