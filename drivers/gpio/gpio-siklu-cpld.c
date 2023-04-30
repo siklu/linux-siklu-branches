@@ -31,23 +31,7 @@ static int siklu_cpld_gpio_get(struct gpio_chip *gc, unsigned offset)
 
 	siklu_cpld_reg_read(cpld_dev, cpld_reg, &reg_val);
 
-/*	printk(KERN_ERR
-	       "siklu_cpld_gpio_get, offset = 0x%x, cpld_reg = 0x%x, reg_val = 0x%x \n",
-	       offset, cpld_reg, reg_val);*/
-
 	return !!(reg_val & (1 << adjust_offset));
-#if 0	
-	struct device *cpld_dev = gpiochip_get_data(gc);
-	u8 reg_val;
-
-	siklu_cpld_reg_read(cpld_dev, R_CPLD_LOGIC_GPIO, &reg_val);
-
-	printk(KERN_ERR
-	       "siklu_cpld_gpio_get, offset = 0x%x, reg_val = 0x%x \n",
-	       offset, reg_val);
-
-	return !!(reg_val & (1 << offset));
-#endif
 }
 
 /* offset values: value/bits 0-7 for reg 0x7, value/bits 8-15 for reg 0xf, value/bits 16-23 for reg 0x14 */
@@ -80,30 +64,8 @@ static void siklu_cpld_gpio_set(struct gpio_chip *gc, unsigned offset, int value
 	else
 		reg_val &= ~(1 << adjust_offset);
 
-/*	printk(KERN_ERR
-	       "siklu_cpld_gpio_set, offset = 0x%x, cpld_reg = 0x%x, value = 0x%x, reg_val = 0x%x \n",
-	       offset, cpld_reg, value, reg_val);*/
-
 	siklu_cpld_reg_write(cpld_dev, cpld_reg, reg_val);
 	mutex_unlock(&siklu_cpld_gpio_mutex);
-#if 0	
-	struct device *cpld_dev = gpiochip_get_data(gc);
-	u8 reg_val;
-
-	mutex_lock(&siklu_cpld_gpio_mutex);
-	siklu_cpld_reg_read(cpld_dev, R_CPLD_LOGIC_GPIO, &reg_val);
-	if (value)
-		reg_val |= (1 << offset);
-	else
-		reg_val &= ~(1 << offset);
-
-	printk(KERN_ERR
-	       "siklu_cpld_gpio_set, offset = 0x%x, value = 0x%x, reg_val = 0x%x \n",
-	       offset, value, reg_val);
-
-	siklu_cpld_reg_write(cpld_dev, R_CPLD_LOGIC_GPIO, reg_val);
-	mutex_unlock(&siklu_cpld_gpio_mutex);
-#endif	
 }
 
 /* offset values: value/bits 0-7 for reg 0x7, value/bits 8-15 for reg 0xf, value/bits 16-23 for reg 0x14 */
