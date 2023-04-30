@@ -107,16 +107,16 @@
 	};
 
 
-	/* We use two Siklu dummy AXI ethernet driver to simulate 2 MAC's so we could approche the two sfp ports eth2 & eth3 */
+	/* We use two Siklu dummy MAC ethernet driver to simulate 2 MAC's so we could approche the two sfp ports eth2 & eth3 */
 	eth2_10g@0 {
-		compatible = "siklu,axi-ethernet-1.00.a";
+		compatible = "siklu,dummy-ethernet-1.00.a";
 		phy-mode = "10gbase-r";
 		sfp = <&sfp_eth2>;
 		status = "okay";
 	};
 
 	eth3_10g@1 {
-		compatible = "siklu,axi-ethernet-1.00.a";
+		compatible = "siklu,dummy-ethernet-1.00.a";
 		phy-mode = "10gbase-r";
 		sfp = <&sfp_eth3>;
 		status = "okay";
