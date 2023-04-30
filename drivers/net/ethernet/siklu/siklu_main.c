@@ -141,7 +141,7 @@ static const struct net_device_ops axienet_netdev_ops = {
 };
 /* Must be shorter than length of ethtool_drvinfo.driver field to fit */
 #define DRIVER_NAME		"siklunet"
-#define DRIVER_DESCRIPTION	"Siklu Axi Ethernet driver"
+#define DRIVER_DESCRIPTION	"Siklu Dummy MAC Ethernet driver"
 #define DRIVER_VERSION		"1.00a"
 
 
