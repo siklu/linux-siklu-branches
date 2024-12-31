@@ -210,6 +210,7 @@
 	rtc: pcf8523@68 {
 		compatible = "nxp,pcf8523";
 		reg = <0x68>;
+		quartz-load-femtofarads = <7000>;
 	};
 	tmp421@4c {
 		compatible = "ti,tmp421";
